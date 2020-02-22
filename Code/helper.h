@@ -5,7 +5,7 @@
 
 #define STRING_OF(__STRING_ARG__) #__STRING_ARG__
 
-#define DEBUG
+// #define DEBUG
 
 #ifdef DEBUG
 #define LOG(...) printf(__VA_ARGS__);

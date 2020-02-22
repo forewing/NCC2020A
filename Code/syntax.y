@@ -1,17 +1,20 @@
-%{
+%code {
     #include <stdio.h>
     #include "lex.yy.c"
 
-    void yyerror(const char *s);
-%}
+    // #define YYDEBUG 1
+    // int yydebug = 1;
 
-%union {
-    int type_int;
-    float type_float;
+    void yyerror(const char *s);
 }
 
-%token <type_int> INT               // Int
-%token <type_float> FLOAT           // Float
+%code requires {
+    #include "tree.h"
+    #define YYSTYPE TreeNode*
+}
+
+%token INT                          // Int
+%token FLOAT                        // Float
 %token ID                           // ID
 %token SEMI COMMA                   // ; ,
 %token ASSIGNOP RELOP               // =, > | < | >= | <= | == |!=
@@ -21,6 +24,8 @@
 %token TYPE                         // int | float
 %token LP RP LB RB LC RC            // (, ), [, ], {, }
 %token STRUCT RETURN IF ELSE WHILE  // Keywords
+
+// %define api.value.type {struct TreeNode*}
 
 %%
 
@@ -117,8 +122,8 @@ Exp : Exp ASSIGNOP Exp
     | Exp LB Exp RB
     | Exp DOT ID
     | ID
-    | INT
-    | FLOAT
+    | INT   {printf("%d\n", $$->data_int);}
+    | FLOAT {printf("%d %f\n",$$->lineno, $$->data_float);}
     ;
 
 Args : Exp COMMA Args

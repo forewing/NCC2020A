@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include "syntax.tab.h"
-
-extern FILE* yyin;
-int yylex();
+#include "yy.h"
 
 int main(int argc, char** argv) {
     if (argc > 1) {
@@ -11,8 +9,6 @@ int main(int argc, char** argv) {
             return 1;
         }
     }
-    // while (yylex() != 0)
-    //     ;
     yyparse();
     return 0;
 }
