@@ -3,7 +3,10 @@
     #include "syntax.tab.h"
     #include "helper.h"
 
-    #define LEX_REGISTE(__LEX_TYPE__) printf("(%d)\t" STRING_OF(__LEX_TYPE__) "\t%s\n", yylineno, yytext);
+    #define LEX_REGISTE(__LEX_TYPE__) { \
+        LOG("(%d)\t" STRING_OF(__LEX_TYPE__) "\t%s\n", yylineno, yytext); \
+        return(__LEX_TYPE__); \
+    }
 %}
 
 %option yylineno
@@ -34,7 +37,6 @@ id      {letter_}({letter_}|{digit})*
 "return"    {LEX_REGISTE(RETURN)}
 "if"        {LEX_REGISTE(IF)}
 "else"      {LEX_REGISTE(ELSE)}
-"then"      {LEX_REGISTE(THEN)}
 
     /* Types */
 "int"   {LEX_REGISTE(TYPE)}
@@ -74,6 +76,6 @@ id      {letter_}({letter_}|{digit})*
 
     /* Invalid */
 
-.       {printf("(%d)\tINVALID\t%s\n", yylineno, yytext);}
+.       {printf("Error type A at Line %d: Mysterious character \"%s\".\n", yylineno, yytext);}
 
 %%

@@ -1,6 +1,5 @@
 #include <stdio.h>
-
-// lex define:
+#include "syntax.tab.h"
 
 extern FILE* yyin;
 int yylex();
@@ -12,7 +11,8 @@ int main(int argc, char** argv) {
             return 1;
         }
     }
-    while (yylex() != 0) {
-    }
+    // while (yylex() != 0)
+    //     ;
+    yyparse();
     return 0;
 }
