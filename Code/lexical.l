@@ -5,7 +5,8 @@
     #include "helper.h"
     #include "tree.h"
 
-    #define LEX_REGISTE_DATA(__LEX_TYPE__, __LEX_DATA_TYPE__, __LEX_DATA_VALUE__) { \
+    #define LEX_REGISTE_DATA(__LEX_TYPE__, __LEX_DATA_TYPE__, __LEX_DATA_VALUE__) \
+    if (!in_block_comment) { \
         LOG("(%d)\t" STRING_OF(__LEX_TYPE__) "\t%s\n", yylineno, yytext); \
         yylval = tree_new(STRING_OF(__LEX_TYPE__), 0); \
         yylval->type = STATE_TERM; \
@@ -16,6 +17,8 @@
 
     #define LEX_REGISTE(__LEX_TYPE__) \
         LEX_REGISTE_DATA(__LEX_TYPE__, data_int, 0)
+
+    bool in_block_comment = false;
 %}
 
 %option yylineno
@@ -29,7 +32,35 @@ id      {letter_}({letter_}|{digit})*
 
 %%
 
+    /* Comment */
+"/*"    {
+    if (in_block_comment){
+        syn_error("Nested block comment beginner");
+    } else {
+        in_block_comment = true;
+        LOG("Starting block comment at Line %d\n", yylineno);
+    }
+}
+
+"*/"    {
+    if (in_block_comment){
+        LOG("Terminating block comment at Line %d\n", yylineno);
+        in_block_comment = false;
+    } else {
+        syn_error("Unexpected block comment terminator");
+    }
+}
+
+\/\/.*$ {
+    if (in_block_comment){
+        REJECT;
+    } else {
+        LOG("Line comment at Line %d\n", yylineno);
+    }
+}
+
     /* Ignore */
+
 {ws}    {}
 
     /* INT */
@@ -38,8 +69,7 @@ id      {letter_}({letter_}|{digit})*
 0(x|X)[0-9a-fA-F]+  {LEX_REGISTE_DATA(INT, data_int, strtol(yytext, NULL, 16))}
 
     /* FLOAT */
-({dec}\.[0-9]+)|((([0-9]+\.[0-9]*)|([0-9]*\.[0-9]+))[eE][+-]?[0-9]+) {
-    LEX_REGISTE_DATA(FLOAT, data_float, atof(yytext))}
+({dec}\.[0-9]+)|((([0-9]+\.[0-9]*)|([0-9]*\.[0-9]+))[eE][+-]?[0-9]+) {LEX_REGISTE_DATA(FLOAT, data_float, atof(yytext))}
 
     /* Keywords */
 "struct"    {LEX_REGISTE(STRUCT)}
@@ -85,6 +115,6 @@ id      {letter_}({letter_}|{digit})*
 
     /* Invalid */
 
-.       {printf("Error type A at Line %d: Mysterious character \"%s\".\n", yylineno, yytext);}
+.       {if (!in_block_comment) lex_error("Mysterious character");}
 
 %%
