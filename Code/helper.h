@@ -7,7 +7,7 @@
 #define DEBUG
 
 // #define DEBUG_LEX
-#define DEBUG_SYN
+// #define DEBUG_SYN
 
 #ifdef DEBUG
 #define LOG(...) printf(__VA_ARGS__);

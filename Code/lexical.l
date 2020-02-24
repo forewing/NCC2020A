@@ -1,6 +1,7 @@
 %{
     #include <stdio.h>
     #include <stdlib.h>
+    #include <string.h>
     #include "syntax.tab.h"
     #include "helper.h"
     #include "tree.h"
@@ -12,7 +13,7 @@
     #define LEX_REGISTE_DATA(__LEX_TYPE__, __LEX_DATA_TYPE__, __LEX_DATA_VALUE__) { \
         LOG_LEX("(%d)\t" STRING_OF(__LEX_TYPE__) "\t%s\n", yylineno, yytext); \
         yylval = tree_new(STRING_OF(__LEX_TYPE__), 0); \
-        yylval->type = STATE_TERM; \
+        yylval->type = __LEX_TYPE__; \
         yylval->lineno = yylineno; \
         yylval->__LEX_DATA_TYPE__ = __LEX_DATA_VALUE__; \
         return(__LEX_TYPE__); \
@@ -85,7 +86,11 @@ id      {letter_}({letter_}|{digit})*
 "float" {LEX_REGISTE_DATA(TYPE, data_int, TYPE_FLOAT)}
 
     /* Marks */
-{id}    {LEX_REGISTE_DATA(ID, data_str, yytext)} // BUG
+{id}    {
+    char* t = malloc(strlen(yytext) + 1);
+    strcpy(t, yytext);
+    LEX_REGISTE_DATA(ID, data_str, t)
+} // BUG
 ";"     {LEX_REGISTE(SEMI)}
 ","     {LEX_REGISTE(COMMA)}
 "."     {LEX_REGISTE(DOT)}

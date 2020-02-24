@@ -40,7 +40,7 @@
 %token LP RP LB RB LC RC            // (, ), [, ], {, }
 %token STRUCT RETURN IF ELSE WHILE  // Keywords
 
-// %define api.value.type {struct TreeNode*}
+
 
 %%
 
