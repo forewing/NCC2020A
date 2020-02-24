@@ -6,6 +6,10 @@
     // int yydebug = 1;
 
     void yyerror(const char *s);
+
+    #define syn_error(__msg__)                                                 \
+        fprintf(stderr, "Error type B at Line %d: %s%s.\n", yylineno, __msg__, \
+                __text__);
 }
 
 %code requires {
@@ -122,8 +126,8 @@ Exp : Exp ASSIGNOP Exp
     | Exp LB Exp RB
     | Exp DOT ID
     | ID
-    | INT   {printf("%d\n", $$->data_int);}
-    | FLOAT {printf("%d %f\n",$$->lineno, $$->data_float);}
+    | INT   {LOG_SYN("%d\n", $$->data_int);}
+    | FLOAT {LOG_SYN("%d %f\n",$$->lineno, $$->data_float);}
     ;
 
 Args : Exp COMMA Args

@@ -8,18 +8,25 @@
 
 #define DEBUG
 
+#define DEBUG_LEX
+#define DEBUG_SYN
+
 #ifdef DEBUG
 #define LOG(...) printf(__VA_ARGS__);
 #else
 #define LOG(...) ;
 #endif
 
-#define lex_error(__msg__, __text__)                                       \
-    fprintf(stderr, "Error type A at Line %d: %s%s.\n", yylineno, __msg__, \
-            __text__);
+#ifdef DEBUG_LEX
+#define LOG_LEX(...) LOG(__VA_ARGS__)
+#else
+#define LOG_LEX(...) ;
+#endif
 
-#define syn_error(__msg__)                                                 \
-    fprintf(stderr, "Error type B at Line %d: %s%s.\n", yylineno, __msg__, \
-            __text__);
+#ifdef DEBUG_SYN
+#define LOG_SYN(...) LOG(__VA_ARGS__)
+#else
+#define LOG_SYN(...) ;
+#endif
 
 #endif

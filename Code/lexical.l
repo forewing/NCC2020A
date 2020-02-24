@@ -5,8 +5,12 @@
     #include "helper.h"
     #include "tree.h"
 
+    #define lex_error(__msg__, __text__)                                   \
+    fprintf(stderr, "Error type A at Line %d: %s%s.\n", yylineno, __msg__, \
+            __text__);
+
     #define LEX_REGISTE_DATA(__LEX_TYPE__, __LEX_DATA_TYPE__, __LEX_DATA_VALUE__) { \
-        LOG("(%d)\t" STRING_OF(__LEX_TYPE__) "\t%s\n", yylineno, yytext); \
+        LOG_LEX("(%d)\t" STRING_OF(__LEX_TYPE__) "\t%s\n", yylineno, yytext); \
         yylval = tree_new(STRING_OF(__LEX_TYPE__), 0); \
         yylval->type = STATE_TERM; \
         yylval->lineno = yylineno; \
@@ -33,14 +37,14 @@ id      {letter_}({letter_}|{digit})*
     /* Comment */
 
 "/*" {
-    LOG("Block comment start at Line: %d.\n", yylineno);
+    LOG_LEX("Block comment start at Line: %d.\n", yylineno);
     while(1) {
         int c;
         while ((c = input()) != '*' && c != 0);
         if (c == '*') {
             while ((c = input()) == '*');
             if (c == '/') {
-                LOG("Block comment ends at Line: %d.\n", yylineno);
+                LOG_LEX("Block comment ends at Line: %d.\n", yylineno);
                 break;
             }
         } else if (c == 0){
@@ -54,7 +58,7 @@ id      {letter_}({letter_}|{digit})*
 
 "//" {
     int c;
-    LOG("Line comment at Line %d\n", yylineno);
+    LOG_LEX("Line comment at Line %d\n", yylineno);
     while((c = input()) != '\n' && c != 0);
 }
 
