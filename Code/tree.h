@@ -31,4 +31,6 @@ TreeNode* tree_new(const char* name, int size);
 
 void tree_set_children(TreeNode* node, ...);
 
+extern TreeNode* tree_root;
+
 #endif
