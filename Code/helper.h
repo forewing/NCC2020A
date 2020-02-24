@@ -14,12 +14,12 @@
 #define LOG(...) ;
 #endif
 
-#define lex_error(__msg__)                                             \
-    fprintf(stderr, "Error type A at Line %d: %s \"%s\".\n", yylineno, \
-            __msg__, yytext);
+#define lex_error(__msg__, __text__)                                       \
+    fprintf(stderr, "Error type A at Line %d: %s%s.\n", yylineno, __msg__, \
+            __text__);
 
-#define syn_error(__msg__)                                             \
-    fprintf(stderr, "Error type B at Line %d: %s \"%s\".\n", yylineno, \
-            __msg__, yytext);
+#define syn_error(__msg__)                                                 \
+    fprintf(stderr, "Error type B at Line %d: %s%s.\n", yylineno, __msg__, \
+            __text__);
 
 #endif

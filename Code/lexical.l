@@ -5,8 +5,7 @@
     #include "helper.h"
     #include "tree.h"
 
-    #define LEX_REGISTE_DATA(__LEX_TYPE__, __LEX_DATA_TYPE__, __LEX_DATA_VALUE__) \
-    if (!in_block_comment) { \
+    #define LEX_REGISTE_DATA(__LEX_TYPE__, __LEX_DATA_TYPE__, __LEX_DATA_VALUE__) { \
         LOG("(%d)\t" STRING_OF(__LEX_TYPE__) "\t%s\n", yylineno, yytext); \
         yylval = tree_new(STRING_OF(__LEX_TYPE__), 0); \
         yylval->type = STATE_TERM; \
@@ -18,7 +17,6 @@
     #define LEX_REGISTE(__LEX_TYPE__) \
         LEX_REGISTE_DATA(__LEX_TYPE__, data_int, 0)
 
-    bool in_block_comment = false;
 %}
 
 %option yylineno
@@ -33,30 +31,31 @@ id      {letter_}({letter_}|{digit})*
 %%
 
     /* Comment */
-"/*"    {
-    if (in_block_comment){
-        syn_error("Nested block comment beginner");
-    } else {
-        in_block_comment = true;
-        LOG("Starting block comment at Line %d\n", yylineno);
+
+"/*" {
+    LOG("Block comment start at Line: %d.\n", yylineno);
+    while(1) {
+        int c;
+        while ((c = input()) != '*' && c != 0);
+        if (c == '*') {
+            while ((c = input()) == '*');
+            if (c == '/') {
+                LOG("Block comment ends at Line: %d.\n", yylineno);
+                break;
+            }
+        } else if (c == 0){
+            lex_error("Unexcepted EOF in block comment, maybe you forget: ", "*/");
+            break;
+        }
     }
 }
 
-"*/"    {
-    if (in_block_comment){
-        LOG("Terminating block comment at Line %d\n", yylineno);
-        in_block_comment = false;
-    } else {
-        syn_error("Unexpected block comment terminator");
-    }
-}
+"*/" {lex_error("Unexcepted block comment terminator: ", yytext);}
 
-\/\/.*$ {
-    if (in_block_comment){
-        REJECT;
-    } else {
-        LOG("Line comment at Line %d\n", yylineno);
-    }
+"//" {
+    int c;
+    LOG("Line comment at Line %d\n", yylineno);
+    while((c = input()) != '\n' && c != 0);
 }
 
     /* Ignore */
@@ -115,6 +114,6 @@ id      {letter_}({letter_}|{digit})*
 
     /* Invalid */
 
-.       {if (!in_block_comment) lex_error("Mysterious character");}
+.       {lex_error("Mysterious character: ", yytext);}
 
 %%
