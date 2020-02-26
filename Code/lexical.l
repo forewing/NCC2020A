@@ -87,12 +87,13 @@ id      {letter_}({letter_}|{digit})*
 "int"   {LEX_REGISTE_DATA(TYPE, data_int, TYPE_INT)}
 "float" {LEX_REGISTE_DATA(TYPE, data_int, TYPE_FLOAT)}
 
-    /* Marks */
 {id}    {
     char* t = malloc(strlen(yytext) + 1);
     strcpy(t, yytext);
     LEX_REGISTE_DATA(ID, data_str, t)
-} // BUG
+}
+
+    /* Marks */
 ";"     {LEX_REGISTE(SEMI)}
 ","     {LEX_REGISTE(COMMA)}
 "."     {LEX_REGISTE(DOT)}

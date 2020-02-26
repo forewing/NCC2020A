@@ -24,9 +24,9 @@ int main(int argc, char** argv) {
 
 void tree_traverse(TreeNode* root, int tabs) {
     if (root->node_type == NODE_EMPTY) {
+        // Just pass
         return;
     }
-    // printf("%ld", (long)root);
     for (int i = 0; i < tabs; i++) {
         putchar(' ');
     }
