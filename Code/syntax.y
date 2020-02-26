@@ -1,27 +1,29 @@
 %code {
     #include <stdio.h>
     #include "lex.yy.c"
+    #include "helper.h"
 
     // #define YYDEBUG 1
     // int yydebug = 1;
 
     void yyerror(const char *s);
 
-    #define syn_error(__msg__)                                                 \
-        fprintf(stderr, "Error type B at Line %d: %s%s.\n", yylineno, __msg__, \
-                __text__);
+    #define syn_error(__msg__) { \
+        fprintf(stderr, "Error type B at Line %d: %s.\n", yylineno, __msg__); \
+        bug_add; \
+    }
 
     #define SYN_REGISTE(__SYN_TYPE__, __SYN_PARENT__, __SYN_PARENT_LOC__, ...) { \
         LOG_SYN("(%d)-%d\t" STRING_OF(__SYN_TYPE__) "\n", __SYN_PARENT_LOC__.first_line, PP_NARG(__VA_ARGS__)); \
         __SYN_PARENT__ = tree_new(STRING_OF(__SYN_TYPE__), PP_NARG(__VA_ARGS__)); \
-        __SYN_PARENT__->type = STATE_NOTERM; \
+        __SYN_PARENT__->node_type = NODE_NOTERM; \
         __SYN_PARENT__->lineno = __SYN_PARENT_LOC__.first_line; \
         tree_set_children(__SYN_PARENT__, __VA_ARGS__); \
     }
 
     #define SYN_REGISTE_EMPTY(__SYN_TYPE__, __SYN_PARENT__) { \
         __SYN_PARENT__ = tree_new(STRING_OF(__SYN_TYPE__), 0); \
-        __SYN_PARENT__->type = STATE_EMPTY; \
+        __SYN_PARENT__->node_type = NODE_EMPTY; \
     }
 
     TreeNode* tree_root;
@@ -153,5 +155,5 @@ Args : Exp COMMA Args   {SYN_REGISTE(Args, $$, @$, $1, $2, $3)}
 %%
 
 void yyerror(const char* msg){
-    fprintf(stderr, "Error type B at Line %d: %s.\n", yylineno, msg);
+    syn_error(msg);
 }

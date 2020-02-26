@@ -6,14 +6,16 @@
     #include "helper.h"
     #include "tree.h"
 
-    #define lex_error(__msg__, __text__)                                   \
-    fprintf(stderr, "Error type A at Line %d: %s%s.\n", yylineno, __msg__, \
-            __text__);
+    #define lex_error(__msg__, __text__) { \
+        fprintf(stderr, "Error type A at Line %d: %s%s.\n", yylineno, __msg__, __text__); \
+        bug_add; \
+    }
 
     #define LEX_REGISTE_DATA(__LEX_TYPE__, __LEX_DATA_TYPE__, __LEX_DATA_VALUE__) { \
         LOG_LEX("(%d)\t" STRING_OF(__LEX_TYPE__) "\t%s\n", yylineno, yytext); \
         yylval = tree_new(STRING_OF(__LEX_TYPE__), 0); \
-        yylval->type = __LEX_TYPE__; \
+        yylval->node_type = NODE_TERM; \
+        yylval->lex_type = __LEX_TYPE__; \
         yylval->lineno = yylineno; \
         yylval->__LEX_DATA_TYPE__ = __LEX_DATA_VALUE__; \
         return(__LEX_TYPE__); \

@@ -1,7 +1,7 @@
 #ifndef TREE_H
 #define TREE_H
 
-enum { STATE_TERM, STATE_NOTERM, STATE_EMPTY };
+enum { NODE_TERM, NODE_NOTERM, NODE_EMPTY };
 enum { TYPE_INT, TYPE_FLOAT };
 enum {
     RELOP_GT,
@@ -17,7 +17,8 @@ typedef struct TreeNode {
     int size;
 
     int lineno;
-    int type;
+    int node_type;
+    int lex_type;
     union {
         int data_int;
         float data_float;
