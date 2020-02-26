@@ -8,3 +8,4 @@
 !/Code/Makefile
 
 /Test/tmp
+/Test/**.out

@@ -35,9 +35,13 @@ syntax-c: $(YFILE)
 .PHONY: clean test
 test: parser
 ifdef target
-	./parser ../Test/$(target)
+	./parser ../Test/$(target).cmm
 else
 	./parser ../Test/test1.cmm
+endif
+diff: parser
+ifdef target
+	./parser ../Test/$(target).cmm | diff -E -Z -B - ../Test/$(target).ans
 endif
 clean:
 	rm -f parser lex.yy.c syntax.tab.c syntax.tab.h syntax.output

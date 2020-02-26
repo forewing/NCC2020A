@@ -62,6 +62,7 @@ ExtDefList : /* empty */    {SYN_REGISTE_EMPTY(ExtDefList, $$)}
 ExtDef : Specifier ExtDefList SEMI  {SYN_REGISTE(ExtDef, $$, @$, $1, $2, $3)}
     | Specifier SEMI                {SYN_REGISTE(ExtDef, $$, @$, $1, $2)}
     | Specifier FunDec CompSt       {SYN_REGISTE(ExtDef, $$, @$, $1, $2, $3)}
+    | Specifier error CompSt    /* ERROR! */
     | Specifier error SEMI      /* ERROR! */
     | error ExtDefList SEMI     /* ERROR! */
     | error SEMI                /* ERROR! */
@@ -92,13 +93,13 @@ Tag : ID    {SYN_REGISTE(Tag, $$, @$, $1)}
 VarDec : ID             {SYN_REGISTE(VarDec, $$, @$, $1)}
     | VarDec LB INT RB  {SYN_REGISTE(VarDec, $$, @$, $1, $2, $3, $4)}
     | error LB INT RB       /* ERROR! */
-    | VarDec LB error RB    /* ERROR! */
+    | VarDec LB error       /* ERROR! */
     ;
 
 FunDec : ID LP VarList RP   {SYN_REGISTE(FunDec, $$, @$, $1, $2, $3, $4)}
     | ID LP RP              {SYN_REGISTE(FunDec, $$, @$, $1, $2, $3)}
     | error LP RP           /* ERROR! */
-    | ID LP error RP        /* ERROR! */
+    | ID error              /* ERROR! */
     | error LP VarList RP   /* ERROR! */
     ;
 
@@ -110,8 +111,7 @@ ParamDec : Specifier VarDec {SYN_REGISTE(ParamDec, $$, @$, $1, $2)}
     ;
 
 CompSt : LC DefList StmtList RC {SYN_REGISTE(CompSt, $$, @$, $1, $2, $3, $4)}
-    | LC error StmtList RC  /* ERROR! */
-    | LC DefList error RC   /* ERROR! */
+    | LC error RC   /* ERROR! */
     ;
 
 StmtList : /* empty */  {SYN_REGISTE_EMPTY(StmtList, $$)}
@@ -125,12 +125,12 @@ Stmt : Exp SEMI                     {SYN_REGISTE(Stmt, $$, @$, $1, $2)}
     | IF LP Exp RP Stmt ELSE Stmt   {SYN_REGISTE(Stmt, $$, @$, $1, $2, $3, $4, $5, $6, $7)}
     | WHILE LP Exp RP Stmt          {SYN_REGISTE(Stmt, $$, @$, $1, $2, $3, $4, $5)}
     | error SEMI            /* ERROR! */
-    | RETURN error SEMI     /* ERROR! */
-    | IF LP error RP Stmt   /* ERROR! */
+    | RETURN error          /* ERROR! */
+    | IF error Stmt         /* ERROR! */
     | IF LP Exp RP error    /* ERROR! */
     | IF LP Exp RP Stmt ELSE error  /* ERROR! */
-    | WHILE LP error RP Stmt    /* ERROR! */
-    | WHILE LP Exp RP error     /* ERROR! */
+    | WHILE error Stmt      /* ERROR! */
+    | WHILE LP Exp RP error /* ERROR! */
     ;
 
 DefList : /* empty */   {SYN_REGISTE_EMPTY(DefList, $$)}
@@ -168,12 +168,12 @@ Exp : Exp ASSIGNOP Exp  {SYN_REGISTE(Exp, $$, @$, $1, $2, $3)}
     | ID                {SYN_REGISTE(Exp, $$, @$, $1)}
     | INT               {SYN_REGISTE(Exp, $$, @$, $1)}
     | FLOAT             {SYN_REGISTE(Exp, $$, @$, $1)}
-    | LP error RP       /* ERROR! */
-    | ID LP error RP    /* ERROR! */
+    | LP error          /* ERROR! */
+    | ID LP error       /* ERROR! */
     | error LP Args RP  /* ERROR! */
     | error LP RP       /* ERROR! */
     | error LB Exp RB   /* ERROR! */
-    | Exp LB error RB   /* ERROR! */
+    | Exp LB error      /* ERROR! */
     ;
 
 Args : Exp COMMA Args   {SYN_REGISTE(Args, $$, @$, $1, $2, $3)}
