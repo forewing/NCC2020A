@@ -1,7 +1,7 @@
 #ifndef TREE_H
 #define TREE_H
 
-enum { STATE_TERM, STATE_NOTERM };
+enum { STATE_TERM, STATE_NOTERM, STATE_EMPTY };
 enum { TYPE_INT, TYPE_FLOAT };
 enum {
     RELOP_GT,

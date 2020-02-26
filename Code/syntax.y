@@ -19,6 +19,11 @@
         tree_set_children(__SYN_PARENT__, __VA_ARGS__); \
     }
 
+    #define SYN_REGISTE_EMPTY(__SYN_TYPE__, __SYN_PARENT__) { \
+        __SYN_PARENT__ = tree_new(STRING_OF(__SYN_TYPE__), 0); \
+        __SYN_PARENT__->type = STATE_EMPTY; \
+    }
+
     TreeNode* tree_root;
 
 }
@@ -47,7 +52,7 @@
 Program : ExtDefList    {SYN_REGISTE(Program, $$, @$, $1); tree_root = $$;}
     ;
 
-ExtDefList : /* empty */
+ExtDefList : /* empty */    {SYN_REGISTE_EMPTY(ExtDefList, $$)}
     | ExtDef ExtDefList {SYN_REGISTE(ExtDefList, $$, @$, $1, $2)}
     ;
 
@@ -69,7 +74,7 @@ StructSpecifier : STRUCT OptTag LC DefList RC   {SYN_REGISTE(StructSpecifier, $$
     | STRUCT Tag    {SYN_REGISTE(StructSpecifier, $$, @$, $1, $2)}
     ;
 
-OptTag : /* empty */
+OptTag : /* empty */    {SYN_REGISTE_EMPTY(OptTag, $$)}
     | ID    {SYN_REGISTE(OptTag, $$, @$, $1)}
     ;
 
@@ -94,7 +99,7 @@ ParamDec : Specifier VarDec {SYN_REGISTE(ParamDec, $$, @$, $1, $2)}
 CompSt : LC DefList StmtList RC {SYN_REGISTE(CompSt, $$, @$, $1, $2, $3, $4)}
     ;
 
-StmtList : /* empty */
+StmtList : /* empty */  {SYN_REGISTE_EMPTY(StmtList, $$)}
     | Stmt StmtList {SYN_REGISTE(StmtList, $$, @$, $1, $2)}
     ;
 
@@ -106,7 +111,7 @@ Stmt : Exp SEMI                     {SYN_REGISTE(Stmt, $$, @$, $1, $2)}
     | WHILE LP Exp RP Stmt          {SYN_REGISTE(Stmt, $$, @$, $1, $2, $3, $4, $5)}
     ;
 
-DefList : /* empty */
+DefList : /* empty */   {SYN_REGISTE_EMPTY(DefList, $$)}
     | Def DefList   {SYN_REGISTE(DefList, $$, @$, $1, $2)}
     ;
 
