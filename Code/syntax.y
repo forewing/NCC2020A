@@ -14,8 +14,8 @@
     }
 
     #define SYN_REGISTE(__SYN_TYPE__, __SYN_PARENT__, __SYN_PARENT_LOC__, ...) { \
-        LOG_SYN("(%d)-%d\t" STRING_OF(__SYN_TYPE__) "\n", __SYN_PARENT_LOC__.first_line, PP_NARG(__VA_ARGS__)); \
-        __SYN_PARENT__ = tree_new(STRING_OF(__SYN_TYPE__), PP_NARG(__VA_ARGS__)); \
+        LOG_SYN("(%d)-%d\t" STRING_OF(__SYN_TYPE__) "\n", __SYN_PARENT_LOC__.first_line, HELPER_NARG(__VA_ARGS__)); \
+        __SYN_PARENT__ = tree_new(STRING_OF(__SYN_TYPE__), HELPER_NARG(__VA_ARGS__)); \
         __SYN_PARENT__->node_type = NODE_NOTERM; \
         __SYN_PARENT__->lineno = __SYN_PARENT_LOC__.first_line; \
         tree_set_children(__SYN_PARENT__, __VA_ARGS__); \
