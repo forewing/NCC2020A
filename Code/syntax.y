@@ -55,8 +55,8 @@
 Program : ExtDefList    {SYN_REGISTE(Program, $$, @$, $1); tree_root = $$;}
     ;
 
-ExtDefList : /* empty */    {SYN_REGISTE_EMPTY(ExtDefList, $$)}
-    | ExtDef ExtDefList     {SYN_REGISTE(ExtDefList, $$, @$, $1, $2)}
+ExtDefList : ExtDef ExtDefList  {SYN_REGISTE(ExtDefList, $$, @$, $1, $2)}
+    | /* empty */               {SYN_REGISTE_EMPTY(ExtDefList, $$)}
     ;
 
 ExtDef : Specifier ExtDefList SEMI  {SYN_REGISTE(ExtDef, $$, @$, $1, $2, $3)}
@@ -83,8 +83,8 @@ StructSpecifier : STRUCT OptTag LC DefList RC   {SYN_REGISTE(StructSpecifier, $$
     | STRUCT OptTag LC error RC     /* ERROR! */
     ;
 
-OptTag : /* empty */    {SYN_REGISTE_EMPTY(OptTag, $$)}
-    | ID    {SYN_REGISTE(OptTag, $$, @$, $1)}
+OptTag : ID         {SYN_REGISTE(OptTag, $$, @$, $1)}
+    | /* empty */   {SYN_REGISTE_EMPTY(OptTag, $$)}
     ;
 
 Tag : ID    {SYN_REGISTE(Tag, $$, @$, $1)}
@@ -114,8 +114,8 @@ CompSt : LC DefList StmtList RC {SYN_REGISTE(CompSt, $$, @$, $1, $2, $3, $4)}
     | LC error RC   /* ERROR! */
     ;
 
-StmtList : /* empty */  {SYN_REGISTE_EMPTY(StmtList, $$)}
-    | Stmt StmtList     {SYN_REGISTE(StmtList, $$, @$, $1, $2)}
+StmtList : Stmt StmtList    {SYN_REGISTE(StmtList, $$, @$, $1, $2)}
+    | /* empty */           {SYN_REGISTE_EMPTY(StmtList, $$)}
     ;
 
 Stmt : Exp SEMI                     {SYN_REGISTE(Stmt, $$, @$, $1, $2)}
@@ -133,8 +133,8 @@ Stmt : Exp SEMI                     {SYN_REGISTE(Stmt, $$, @$, $1, $2)}
     | WHILE LP Exp RP error /* ERROR! */
     ;
 
-DefList : /* empty */   {SYN_REGISTE_EMPTY(DefList, $$)}
-    | Def DefList       {SYN_REGISTE(DefList, $$, @$, $1, $2)}
+DefList : Def DefList   {SYN_REGISTE(DefList, $$, @$, $1, $2)}
+    | /* empty */       {SYN_REGISTE_EMPTY(DefList, $$)}
     ;
 
 Def : Specifier DecList SEMI    {SYN_REGISTE(Def, $$, @$, $1, $2, $3)}
