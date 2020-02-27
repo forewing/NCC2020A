@@ -48,6 +48,15 @@
 %token LP RP LB RB LC RC            // (, ), [, ], {, }
 %token STRUCT RETURN IF ELSE WHILE  // Keywords
 
+%right ASSIGNOP
+%left OR
+%left AND
+%left RELOP
+%left PLUS MINUS
+%left STAR DIV
+%right NOT
+%left LP RP LB RB DOT
+
 %nonassoc LOWER_THAN_ELSE
 %nonassoc ELSE
 
@@ -60,16 +69,13 @@ ExtDefList : ExtDef ExtDefList  {SYN_REGISTE(ExtDefList, $$, @$, $1, $2)}
     | /* empty */               {SYN_REGISTE_EMPTY(ExtDefList, $$)}
     ;
 
-ExtDef : Specifier ExtDefList SEMI  {SYN_REGISTE(ExtDef, $$, @$, $1, $2, $3)}
+ExtDef : Specifier ExtDecList SEMI  {SYN_REGISTE(ExtDef, $$, @$, $1, $2, $3)}
     | Specifier SEMI                {SYN_REGISTE(ExtDef, $$, @$, $1, $2)}
     | Specifier FunDec CompSt       {SYN_REGISTE(ExtDef, $$, @$, $1, $2, $3)}
-    | error FunDec CompSt {  }
-    | Specifier error { }
-    | error SEMI {  }
     ;
 
-ExtDefList : VarDec             {SYN_REGISTE(ExtDefList, $$, @$, $1)}
-    | VarDec COMMA ExtDefList   {SYN_REGISTE(ExtDefList, $$, @$, $1, $2, $3)}
+ExtDecList : VarDec             {SYN_REGISTE(ExtDecList, $$, @$, $1)}
+    | VarDec COMMA ExtDecList   {SYN_REGISTE(ExtDecList, $$, @$, $1, $2, $3)}
     ;
 
 
@@ -79,7 +85,6 @@ Specifier : TYPE        {SYN_REGISTE(Specifier, $$, @$, $1)}
 
 StructSpecifier : STRUCT OptTag LC DefList RC   {SYN_REGISTE(StructSpecifier, $$, @$, $1, $2, $3, $4, $5)}
     | STRUCT Tag    {SYN_REGISTE(StructSpecifier, $$, @$, $1, $2)}
-    | STRUCT OptTag LC error RC {  }
     ;
 
 OptTag : ID         {SYN_REGISTE(OptTag, $$, @$, $1)}
@@ -91,13 +96,10 @@ Tag : ID    {SYN_REGISTE(Tag, $$, @$, $1)}
 
 VarDec : ID             {SYN_REGISTE(VarDec, $$, @$, $1)}
     | VarDec LB INT RB  {SYN_REGISTE(VarDec, $$, @$, $1, $2, $3, $4)}
-    | VarDec LB error { }
     ;
 
 FunDec : ID LP VarList RP   {SYN_REGISTE(FunDec, $$, @$, $1, $2, $3, $4)}
     | ID LP RP              {SYN_REGISTE(FunDec, $$, @$, $1, $2, $3)}
-    | ID error {  }
-    | ID LP error RP {  }
     ;
 
 VarList : ParamDec COMMA VarList    {SYN_REGISTE(VarList, $$, @$, $1, $2, $3)}
@@ -108,7 +110,6 @@ ParamDec : Specifier VarDec {SYN_REGISTE(ParamDec, $$, @$, $1, $2)}
     ;
 
 CompSt : LC DefList StmtList RC {SYN_REGISTE(CompSt, $$, @$, $1, $2, $3, $4)}
-    | LC error RC{  }
     ;
 
 StmtList : Stmt StmtList    {SYN_REGISTE(StmtList, $$, @$, $1, $2)}
@@ -121,9 +122,6 @@ Stmt : Exp SEMI                     {SYN_REGISTE(Stmt, $$, @$, $1, $2)}
     | IF LP Exp RP Stmt %prec LOWER_THAN_ELSE {SYN_REGISTE(Stmt, $$, @$, $1, $2, $3, $4, $5)}
     | IF LP Exp RP Stmt ELSE Stmt   {SYN_REGISTE(Stmt, $$, @$, $1, $2, $3, $4, $5, $6, $7)}
     | WHILE LP Exp RP Stmt          {SYN_REGISTE(Stmt, $$, @$, $1, $2, $3, $4, $5)}
-    | RETURN error {  }
-    | IF error {  }
-    | WHILE error {  }
     ;
 
 DefList : Def DefList   {SYN_REGISTE(DefList, $$, @$, $1, $2)}
@@ -135,7 +133,6 @@ Def : Specifier DecList SEMI    {SYN_REGISTE(Def, $$, @$, $1, $2, $3)}
 
 DecList : Dec           {SYN_REGISTE(DecList, $$, @$, $1)}
     | Dec COMMA DecList {SYN_REGISTE(DecList, $$, @$, $1, $2, $3)}
-    | Dec error DecList {  }
     ;
 
 Dec : VarDec                {SYN_REGISTE(Dec, $$, @$, $1)}
@@ -160,9 +157,6 @@ Exp : Exp ASSIGNOP Exp  {SYN_REGISTE(Exp, $$, @$, $1, $2, $3)}
     | ID                {SYN_REGISTE(Exp, $$, @$, $1)}
     | INT               {SYN_REGISTE(Exp, $$, @$, $1)}
     | FLOAT             {SYN_REGISTE(Exp, $$, @$, $1)}
-    | ID LP error {  }
-    | Exp LB error {  }
-    | LP error RP {  }
     ;
 
 Args : Exp COMMA Args   {SYN_REGISTE(Args, $$, @$, $1, $2, $3)}
