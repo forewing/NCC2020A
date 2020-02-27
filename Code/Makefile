@@ -32,17 +32,22 @@ syntax-c: $(YFILE)
 -include $(patsubst %.o, %.d, $(OBJS))
 
 # 定义的一些伪目标
-.PHONY: clean test
-test: parser
+.PHONY: clean test diff lab1
+test:
 ifdef target
 	./parser ../Test/$(target).cmm
 else
 	./parser ../Test/test1.cmm
 endif
-diff: parser
+
+diff:
 ifdef target
-	./parser ../Test/$(target).cmm | diff -E -Z -B - ../Test/$(target).ans
+	./parser ../Test/$(target).cmm 2>&1 | diff -Z -B - ../Test/$(target).ans
 endif
+
+lab1: parser
+	for i in `seq 1 10`; do echo "Testing Lab1/test$$i" && make -s diff target=Lab1/test$$i; done
+
 clean:
 	rm -f parser lex.yy.c syntax.tab.c syntax.tab.h syntax.output
 	rm -f $(OBJS) $(OBJS:.o=.d)

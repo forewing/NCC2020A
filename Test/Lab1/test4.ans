@@ -55,6 +55,6 @@ Program (1)
                   ID: image
                 ASSIGNOP
                 Exp (8)
-                  FLOAT: 3.5
+                  FLOAT: 3.500000
               SEMI
           RC
