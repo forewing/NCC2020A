@@ -7,7 +7,7 @@
     #include "tree.h"
 
     #define lex_error(__msg__, __text__) { \
-        fprintf(stderr, "Error type A at Line %d: %s%s.\n", yylineno, __msg__, __text__); \
+        fprintf(stderr, "Error type A at Line %d: %s%s\n", yylineno, __msg__, __text__); \
         bug_add; \
     }
 
@@ -82,6 +82,7 @@ id      {letter_}({letter_}|{digit})*
 "return"    {LEX_REGISTE(RETURN)}
 "if"        {LEX_REGISTE(IF)}
 "else"      {LEX_REGISTE(ELSE)}
+"while"     {LEX_REGISTE(WHILE)}
 
     /* Types */
 "int"   {LEX_REGISTE_DATA(TYPE, data_int, TYPE_INT)}
