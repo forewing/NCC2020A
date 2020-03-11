@@ -9,7 +9,7 @@
     void yyerror(const char *s);
 
     #define syn_error(__msg__) { \
-        fprintf(stderr, "Error type B at Line %d: %s.\n", yylineno, __msg__); \
+        fprintf(stderr, "Error type B at Line %d: %s\n", yylineno, __msg__); \
         bug_add; \
     }
 
@@ -185,5 +185,5 @@ Args : Exp COMMA Args   {SYN_REGISTE(Args, $$, @$, $1, $2, $3)}
 %%
 
 void yyerror(const char* msg){
-    syn_error(msg);
+    syn_error(yytext);
 }
