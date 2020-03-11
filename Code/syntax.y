@@ -146,6 +146,7 @@ DefList : Def DefList   {SYN_REGISTE(DefList, $$, @$, $1, $2)}
 Def : Specifier DecList SEMI    {SYN_REGISTE(Def, $$, @$, $1, $2, $3)}
     | error DecList SEMI        /* ERROR! */
     | Specifier error SEMI      /* ERROR! */
+    | error SEMI
     ;
 
 DecList : Dec           {SYN_REGISTE(DecList, $$, @$, $1)}
