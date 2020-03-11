@@ -54,6 +54,7 @@
 %left RELOP
 %left PLUS MINUS
 %left STAR DIV
+%precedence NEGATIVE
 %right NOT
 %left LP RP LB RB DOT
 
@@ -164,7 +165,7 @@ Exp : Exp ASSIGNOP Exp  {SYN_REGISTE(Exp, $$, @$, $1, $2, $3)}
     | Exp STAR Exp      {SYN_REGISTE(Exp, $$, @$, $1, $2, $3)}
     | Exp DIV Exp       {SYN_REGISTE(Exp, $$, @$, $1, $2, $3)}
     | LP Exp RP         {SYN_REGISTE(Exp, $$, @$, $1, $2, $3)}
-    | MINUS Exp         {SYN_REGISTE(Exp, $$, @$, $1, $2)}
+    | MINUS Exp %prec NEGATIVE  {SYN_REGISTE(Exp, $$, @$, $1, $2)}
     | NOT Exp           {SYN_REGISTE(Exp, $$, @$, $1, $2)}
     | ID LP Args RP     {SYN_REGISTE(Exp, $$, @$, $1, $2, $3, $4)}
     | ID LP RP          {SYN_REGISTE(Exp, $$, @$, $1, $2, $3)}

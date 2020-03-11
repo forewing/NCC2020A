@@ -40,7 +40,7 @@ void tree_traverse(TreeNode* root, int tabs) {
     } else if (root->lex_type == TYPE) {
         printf("TYPE: %s\n", root->data_int == TYPE_FLOAT ? "float" : "int");
     } else if (root->lex_type == INT) {
-        printf("INT: %d\n", root->data_int);
+        printf("INT: %ld\n", root->data_int);
     } else if (root->lex_type == FLOAT) {
         printf("FLOAT: %f\n", root->data_float);
     } else {

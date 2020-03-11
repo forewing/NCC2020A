@@ -20,7 +20,7 @@ typedef struct TreeNode {
     int node_type;
     int lex_type;
     union {
-        int data_int;
+        long data_int;
         float data_float;
         char* data_str;
     };
