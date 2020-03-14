@@ -75,7 +75,7 @@ id      {letter_}({letter_}|{digit})*
 0(x|X)[0-9a-fA-F]+  {LEX_REGISTE_DATA(INT, data_int, strtol(yytext, NULL, 16))}
 
     /* FLOAT */
-({dec}\.[0-9]+)|((([0-9]+\.[0-9]*)|([0-9]*\.[0-9]+))[eE][+-]?[0-9]+) {LEX_REGISTE_DATA(FLOAT, data_float, atof(yytext))}
+([0-9]+\.[0-9]+)|((([0-9]+\.[0-9]*)|([0-9]*\.[0-9]+))[eE][+-]?[0-9]+) {LEX_REGISTE_DATA(FLOAT, data_float, atof(yytext))}
 
     /* Keywords */
 "struct"    {LEX_REGISTE(STRUCT)}
