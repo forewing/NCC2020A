@@ -9,7 +9,7 @@
     void yyerror(const char *s);
 
     #define syn_error(__msg__) { \
-        fprintf(stderr, "Error type B at Line %d: %s\n", yylineno, __msg__); \
+        fprintf(stderr, "Error type B at Line %d: %s.\n", yylineno, __msg__); \
         bug_add; \
     }
 

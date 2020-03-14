@@ -7,7 +7,7 @@
     #include "tree.h"
 
     #define lex_error(__msg__, __text__) { \
-        fprintf(stderr, "Error type A at Line %d: %s%s\n", yylineno, __msg__, __text__); \
+        fprintf(stderr, "Error type A at Line %d: %s%s.\n", yylineno, __msg__, __text__); \
         bug_add; \
     }
 
