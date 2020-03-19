@@ -7,6 +7,7 @@
 void print_syntax_tree(TreeNode* root, int tabs);
 
 int bug_number = 0;
+int total_lines = 0;
 
 int main(int argc, char** argv) {
     if (argc > 1) {
@@ -17,6 +18,9 @@ int main(int argc, char** argv) {
     }
     yyparse();
     if (bug_number == 0) {
+        if (tree_root->children[0]->size == 0) {
+            tree_root->lineno = total_lines;
+        }
         print_syntax_tree(tree_root, 0);
     }
     return 0;
