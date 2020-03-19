@@ -4,7 +4,7 @@
 #include "tree.h"
 #include "yy.h"
 
-void tree_traverse(TreeNode* root, int tabs);
+void print_syntax_tree(TreeNode* root, int tabs);
 
 int bug_number = 0;
 
@@ -17,12 +17,12 @@ int main(int argc, char** argv) {
     }
     yyparse();
     if (bug_number == 0) {
-        tree_traverse(tree_root, 0);
+        print_syntax_tree(tree_root, 0);
     }
     return 0;
 }
 
-void tree_traverse(TreeNode* root, int tabs) {
+void print_syntax_tree(TreeNode* root, int tabs) {
     if (root->node_type == NODE_EMPTY) {
         // Just pass
         return;
@@ -33,7 +33,7 @@ void tree_traverse(TreeNode* root, int tabs) {
     if (root->node_type == NODE_NOTERM) {
         printf("%s (%d)\n", root->name, root->lineno);
         for (int i = 0; i < root->size; i++) {
-            tree_traverse(root->children[i], tabs + 2);
+            print_syntax_tree(root->children[i], tabs + 2);
         }
     } else if (root->lex_type == ID) {
         printf("ID: %s\n", root->data_str);
