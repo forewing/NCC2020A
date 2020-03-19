@@ -73,6 +73,7 @@ ExtDefList : ExtDef ExtDefList  {SYN_REGISTE(ExtDefList, $$, @$, $1, $2)}
 ExtDef : Specifier ExtDecList SEMI  {SYN_REGISTE(ExtDef, $$, @$, $1, $2, $3)}
     | Specifier SEMI                {SYN_REGISTE(ExtDef, $$, @$, $1, $2)}
     | Specifier FunDec CompSt       {SYN_REGISTE(ExtDef, $$, @$, $1, $2, $3)}
+    | Specifier FunDec SEMI         {SYN_REGISTE(ExtDef, $$, @$, $1, $2, $3)}
     | Specifier error CompSt    /* ERROR! */
     | Specifier error SEMI      /* ERROR! */
     | error SEMI                /* ERROR! */
