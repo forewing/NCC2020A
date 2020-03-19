@@ -24,6 +24,8 @@
     #define LEX_REGISTE(__LEX_TYPE__) \
         LEX_REGISTE_DATA(__LEX_TYPE__, data_int, 0)
 
+    extern int total_lines;
+
 %}
 
 %option yylineno
@@ -128,5 +130,7 @@ id      {letter_}({letter_}|{digit})*
     /* Invalid */
 
 .       {lex_error("Mysterious character: ", yytext);}
+
+<<EOF>> {total_lines = yylineno; return 0;}
 
 %%
