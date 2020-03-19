@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 // #define DEBUG
 
@@ -46,5 +47,14 @@
 
 extern int bug_number;
 #define bug_add bug_number++;
+
+char* strdup2(const char* str);
+
+#define FREE(__ITEM__)      \
+    {                       \
+        if (__ITEM__)       \
+            free(__ITEM__); \
+        __ITEM__ = NULL;    \
+    }
 
 #endif
