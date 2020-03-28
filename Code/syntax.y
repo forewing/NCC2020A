@@ -17,6 +17,7 @@
         LOG_SYN("(%d)-%d\t" STRING_OF(__SYN_TYPE__) "\n", __SYN_PARENT_LOC__.first_line, HELPER_NARG(__VA_ARGS__)); \
         __SYN_PARENT__ = tree_new(STRING_OF(__SYN_TYPE__), HELPER_NARG(__VA_ARGS__)); \
         __SYN_PARENT__->node_type = NODE_NOTERM; \
+        __SYN_PARENT__->state_type = __SYN_TYPE__; \
         __SYN_PARENT__->lineno = __SYN_PARENT_LOC__.first_line; \
         tree_set_children(__SYN_PARENT__, __VA_ARGS__); \
     }
@@ -24,6 +25,7 @@
     #define SYN_REGISTE_EMPTY(__SYN_TYPE__, __SYN_PARENT__) { \
         __SYN_PARENT__ = tree_new(STRING_OF(__SYN_TYPE__), 0); \
         __SYN_PARENT__->node_type = NODE_EMPTY; \
+        __SYN_PARENT__->state_type = __SYN_TYPE__; \
     }
 
     TreeNode* tree_root;
@@ -66,8 +68,8 @@
 Program : ExtDefList    {SYN_REGISTE(Program, $$, @$, $1); tree_root = $$;}
     ;
 
-ExtDefList : ExtDef ExtDefList  {SYN_REGISTE(ExtDefList, $$, @$, $1, $2)}
-    | /* empty */               {SYN_REGISTE_EMPTY(ExtDefList, $$)}
+ExtDefList : ExtDef ExtDefList  {SYN_REGISTE(ExtDefList, $$, @$, $1, $2) $$->data_int = $2->data_int + 1;}
+    | /* empty */               {SYN_REGISTE_EMPTY(ExtDefList, $$) $$->data_int = 0;}
     ;
 
 ExtDef : Specifier ExtDecList SEMI  {SYN_REGISTE(ExtDef, $$, @$, $1, $2, $3)}
@@ -79,8 +81,8 @@ ExtDef : Specifier ExtDecList SEMI  {SYN_REGISTE(ExtDef, $$, @$, $1, $2, $3)}
     | error SEMI                /* ERROR! */
     ;
 
-ExtDecList : VarDec             {SYN_REGISTE(ExtDecList, $$, @$, $1)}
-    | VarDec COMMA ExtDecList   {SYN_REGISTE(ExtDecList, $$, @$, $1, $2, $3)}
+ExtDecList : VarDec             {SYN_REGISTE(ExtDecList, $$, @$, $1) $$->data_int = 1;}
+    | VarDec COMMA ExtDecList   {SYN_REGISTE(ExtDecList, $$, @$, $1, $2, $3) $$->data_int = $3->data_int + 1;}
     ;
 
 
@@ -114,8 +116,8 @@ FunDec : ID LP VarList RP   {SYN_REGISTE(FunDec, $$, @$, $1, $2, $3, $4)}
     | error LP VarList RP   /* ERROR! */
     ;
 
-VarList : ParamDec COMMA VarList    {SYN_REGISTE(VarList, $$, @$, $1, $2, $3)}
-    | ParamDec                      {SYN_REGISTE(VarList, $$, @$, $1)}
+VarList : ParamDec COMMA VarList    {SYN_REGISTE(VarList, $$, @$, $1, $2, $3) $$->data_int = $3->data_int + 1;}
+    | ParamDec                      {SYN_REGISTE(VarList, $$, @$, $1) $$->data_int = 1;}
     ;
 
 ParamDec : Specifier VarDec {SYN_REGISTE(ParamDec, $$, @$, $1, $2)}
@@ -125,8 +127,8 @@ CompSt : LC DefList StmtList RC {SYN_REGISTE(CompSt, $$, @$, $1, $2, $3, $4)}
     | LC error RC   /* ERROR! */
     ;
 
-StmtList : Stmt StmtList    {SYN_REGISTE(StmtList, $$, @$, $1, $2)}
-    | /* empty */           {SYN_REGISTE_EMPTY(StmtList, $$)}
+StmtList : Stmt StmtList    {SYN_REGISTE(StmtList, $$, @$, $1, $2) $$->data_int = $2->data_int + 1;}
+    | /* empty */           {SYN_REGISTE_EMPTY(StmtList, $$) $$->data_int = 0;}
     ;
 
 Stmt : Exp SEMI                     {SYN_REGISTE(Stmt, $$, @$, $1, $2)}
@@ -140,8 +142,8 @@ Stmt : Exp SEMI                     {SYN_REGISTE(Stmt, $$, @$, $1, $2)}
     | WHILE error           /* ERROR! */
     ;
 
-DefList : Def DefList   {SYN_REGISTE(DefList, $$, @$, $1, $2)}
-    | /* empty */       {SYN_REGISTE_EMPTY(DefList, $$)}
+DefList : Def DefList   {SYN_REGISTE(DefList, $$, @$, $1, $2) $$->data_int = $2->data_int + 1;}
+    | /* empty */       {SYN_REGISTE_EMPTY(DefList, $$) $$->data_int = 0;}
     ;
 
 Def : Specifier DecList SEMI    {SYN_REGISTE(Def, $$, @$, $1, $2, $3)}
@@ -150,8 +152,8 @@ Def : Specifier DecList SEMI    {SYN_REGISTE(Def, $$, @$, $1, $2, $3)}
     | error SEMI
     ;
 
-DecList : Dec           {SYN_REGISTE(DecList, $$, @$, $1)}
-    | Dec COMMA DecList {SYN_REGISTE(DecList, $$, @$, $1, $2, $3)}
+DecList : Dec           {SYN_REGISTE(DecList, $$, @$, $1) $$->data_int = 1;}
+    | Dec COMMA DecList {SYN_REGISTE(DecList, $$, @$, $1, $2, $3) $$->data_int = $3->data_int + 1;}
     ;
 
 Dec : VarDec                {SYN_REGISTE(Dec, $$, @$, $1)}

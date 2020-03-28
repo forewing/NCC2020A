@@ -29,7 +29,8 @@ int hashmap_insert(HashMap* map, const char* key, int age, TypeNode* data) {
     unsigned int pos = hash(key);
 
     HashNode* newNode = (HashNode*)malloc(sizeof(HashNode));
-    newNode->data = data;
+    newNode->data = (TypeNode*)malloc(sizeof(TypeNode));
+    memcpy(newNode->data, data, sizeof(TypeNode));
     newNode->key = strdup2(key);
     newNode->age = age;
     newNode->next = map->nodes[pos];
@@ -105,4 +106,22 @@ int hashmap_delete(HashMap* map, const char* key, int age) {
     }
 
     return -1;
+}
+
+int hashmap_delete_age(HashMap* map, int age) {
+    if (age < 0)
+        return -1;
+    for (int i = 0; i < HASH_SIZE; i++) {
+        HashNode* ptr = map->nodes[i];
+        while (ptr) {
+            if (ptr->age == age) {
+                HashNode* tmp = ptr->next;
+                hashmap_delete(map, ptr->key, age);
+                ptr = tmp;
+            } else {
+                ptr = ptr->next;
+            }
+        }
+    }
+    return 0;
 }

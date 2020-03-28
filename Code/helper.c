@@ -6,3 +6,5 @@ char* strdup2(const char* str) {
     strcpy(ret, str);
     return ret;
 }
+
+void __free(void* n) {}

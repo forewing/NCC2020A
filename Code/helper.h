@@ -51,11 +51,12 @@ extern int bug_number;
 
 char* strdup2(const char* str);
 
-#define FREE(__ITEM__)      \
-    {                       \
-        if (__ITEM__)       \
-            free(__ITEM__); \
-        __ITEM__ = NULL;    \
+void __free(void* n);
+#define FREE(__ITEM__)        \
+    {                         \
+        if (__ITEM__)         \
+            __free(__ITEM__); \
+        __ITEM__ = NULL;      \
     }
 
 #endif

@@ -44,14 +44,14 @@ static void _print_syntax_tree(TreeNode* root, int tabs) {
         for (int i = 0; i < root->size; i++) {
             _print_syntax_tree(root->children[i], tabs + 2);
         }
-    } else if (root->lex_type == ID) {
+    } else if (root->state_type == ID) {
         printf("ID: %s\n", root->data_str);
-    } else if (root->lex_type == TYPE) {
+    } else if (root->state_type == TYPE) {
         printf("TYPE: %s\n",
                root->data_int == TYPENAME_FLOAT ? "float" : "int");
-    } else if (root->lex_type == INT) {
+    } else if (root->state_type == INT) {
         printf("INT: %ld\n", root->data_int);
-    } else if (root->lex_type == FLOAT) {
+    } else if (root->state_type == FLOAT) {
         printf("FLOAT: %f\n", root->data_float);
     } else {
         printf("%s\n", root->name);

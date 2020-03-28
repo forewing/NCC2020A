@@ -7,13 +7,12 @@ int typeEqual(TypeNode* a, TypeNode* b) {
         return 0;
     if (a->type != b->type)
         return 0;
-
-    if (a->type == TYPE_ARRAY) {
-        if (a->data_array.size == b->data_array.size &&
-            typeEqual(a->data_array.type, b->data_array.type))
-            return 1;
+    if (a->type == TYPE_INVALID)
         return 0;
-    } else if (a->type == TYPE_STRUCT) {
+    if (a->dimen != b->dimen)
+        return 0;
+
+    if (a->type == TYPE_STRUCT) {
         if (a->data_struct.size != b->data_struct.size)
             return 0;
         for (int i = 0; i < a->data_struct.size; i++)
@@ -33,10 +32,17 @@ int typeEqual(TypeNode* a, TypeNode* b) {
     return 0;
 }
 
+TypeNode* type_new_invalid() {
+    TypeNode* ret = (TypeNode*)malloc(sizeof(TypeNode));
+    ret->type = TYPE_INVALID;
+    return ret;
+}
+
 TypeNode* type_new_int(int value) {
     TypeNode* ret = (TypeNode*)malloc(sizeof(TypeNode));
     ret->type = TYPE_INT;
     ret->data_int = value;
+    ret->dimen = 0;
     return ret;
 }
 
@@ -44,14 +50,7 @@ TypeNode* type_new_float(float value) {
     TypeNode* ret = (TypeNode*)malloc(sizeof(TypeNode));
     ret->type = TYPE_FLOAT;
     ret->data_float = value;
-    return ret;
-}
-
-TypeNode* type_new_array(int size, TypeNode* type) {
-    TypeNode* ret = (TypeNode*)malloc(sizeof(TypeNode));
-    ret->type = TYPE_ARRAY;
-    ret->data_array.size = size;
-    ret->data_array.type = type;
+    ret->dimen = 0;
     return ret;
 }
 
@@ -60,6 +59,8 @@ TypeNode* type_new_struct(int size) {
     ret->type = TYPE_STRUCT;
     ret->data_struct.size = size;
     ret->data_struct.types = (TypeNode**)malloc(sizeof(TypeNode) * size);
+    ret->data_struct.is_type = 0;
+    ret->dimen = 0;
     return ret;
 }
 
@@ -68,6 +69,7 @@ TypeNode* type_new_func(TypeNode* ret, TypeNode* args) {
     tmp->type = TYPE_FUNC;
     tmp->data_func.ret = ret;
     tmp->data_func.args = args;
+    tmp->data_func.is_def = 0;
     return tmp;
 }
 
@@ -75,9 +77,7 @@ int type_free(TypeNode* node) {
     if (!node)
         return -1;
 
-    if (node->type == TYPE_ARRAY) {
-        type_free(node->data_array.type);
-    } else if (node->type == TYPE_STRUCT) {
+    if (node->type == TYPE_STRUCT) {
         for (int i = 0; i < node->data_struct.size; i++)
             type_free(node->data_struct.types[i]);
     } else if (node->type == TYPE_FUNC) {

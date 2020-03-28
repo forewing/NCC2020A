@@ -9,3 +9,5 @@
 
 /Test/tmp
 /Test/**.out
+
+.vscode

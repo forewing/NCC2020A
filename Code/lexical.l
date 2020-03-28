@@ -15,7 +15,7 @@
         LOG_LEX("(%d)\t" STRING_OF(__LEX_TYPE__) "\t%s\n", yylineno, yytext); \
         yylval = tree_new(STRING_OF(__LEX_TYPE__), 0); \
         yylval->node_type = NODE_TERM; \
-        yylval->lex_type = __LEX_TYPE__; \
+        yylval->state_type = __LEX_TYPE__; \
         yylval->lineno = yylineno; \
         yylval->__LEX_DATA_TYPE__ = __LEX_DATA_VALUE__; \
         return(__LEX_TYPE__); \

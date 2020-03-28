@@ -12,13 +12,37 @@ enum {
     RELOP_NE,
 };
 
+enum {
+    Program,
+    ExtDefList,
+    ExtDef,
+    ExtDecList,
+    Specifier,
+    StructSpecifier,
+    OptTag,
+    Tag,
+    VarDec,
+    FunDec,
+    VarList,
+    ParamDec,
+    CompSt,
+    StmtList,
+    Stmt,
+    DefList,
+    Def,
+    DecList,
+    Dec,
+    Exp,
+    Args
+};
+
 typedef struct TreeNode {
     const char* name;
     int size;
 
     int lineno;
     int node_type;
-    int lex_type;
+    int state_type;
     union {
         long data_int;
         float data_float;
