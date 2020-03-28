@@ -26,8 +26,8 @@ TypeNode* state_FunDec(TreeNode* root, TypeNode* type);
 void state_VarList(TreeNode* root, TypeNode** type_pos);
 TypeNode* state_ParamDec(TreeNode* root);
 void state_CompSt(TreeNode* root, TypeNode* func);
-void state_StmtList(TreeNode* root);
-void state_Stmt(TreeNode* root);
+void state_StmtList(TreeNode* root, TypeNode* ret);
+void state_Stmt(TreeNode* root, TypeNode* ret);
 void state_DefList(TreeNode* root, TypeNode** type_pos);
 void state_Def(TreeNode* root, TypeNode** type_pos);
 void state_DecList(TreeNode* root, TypeNode* type, TypeNode** type_pos);
@@ -222,11 +222,42 @@ TypeNode* state_ParamDec(TreeNode* root) {
     return type;
 }
 
-void state_CompSt(TreeNode* root, TypeNode* func) {}
+void state_CompSt(TreeNode* root, TypeNode* func) {
+    age_now++;
 
-void state_StmtList(TreeNode* root) {}
+    // Spray args
+    if (func) {
+        TypeNode* args = func->data_func.args;
+        for (int i = 0; i < args->data_struct.size; i++) {
+            hashmap_insert(symtab, args->data_struct.types[i]->name, age_now,
+                           args->data_struct.types[i]);
+        }
+    }
 
-void state_Stmt(TreeNode* root) {}
+    state_DefList(root->children[1], NULL);
+
+    // hashmap_print(symtab);
+
+    if (func)
+        state_StmtList(root->children[2], func->data_func.ret);
+    else
+        state_StmtList(root->children[2], NULL);
+
+    hashmap_delete_age(symtab, age_now);
+    age_now--;
+}
+
+void state_StmtList(TreeNode* root, TypeNode* ret) {
+    if (root->size == 2) {
+        // Stmt StmtList
+        state_Stmt(root->children[0], ret);
+        state_StmtList(root->children[1], ret);
+    }
+}
+
+void state_Stmt(TreeNode* root, TypeNode* ret) {
+    // TODO
+}
 
 void state_DefList(TreeNode* root, TypeNode** type_pos) {
     if (!root || root->size == 0)
@@ -286,6 +317,10 @@ void state_Dec(TreeNode* root, TypeNode* type, TypeNode** type_pos) {
         *type_pos = node;
 }
 
-TypeNode* state_Exp(TreeNode* root) {}
+TypeNode* state_Exp(TreeNode* root) {
+    // TODO
+}
 
-void state_Args(TreeNode* root) {}
+void state_Args(TreeNode* root) {
+    // TODO
+}
