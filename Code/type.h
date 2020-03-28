@@ -31,5 +31,6 @@ TypeNode* type_new_float(float value);
 TypeNode* type_new_struct(int size);
 TypeNode* type_new_func(TypeNode* ret, TypeNode* args);
 int type_free(TypeNode* node);
+TypeNode* type_dup(TypeNode* type);
 
 #endif

@@ -1,5 +1,23 @@
+struct a {
+	int x, y[1][1][1];
+	float f, k;
+	int you;
+};
+
+struct b x;
+
+
+//struct a;
+
+int fuck(int x);
+
+int fuck(int x){
+	x = x + 1;
+}
+
 int main()
 {
 	int i = 1;
 	int j = 2;
+	int i;
 }

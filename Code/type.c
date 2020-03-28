@@ -1,5 +1,6 @@
 #include "type.h"
 #include <stdlib.h>
+#include <string.h>
 #include "helper.h"
 
 int typeEqual(TypeNode* a, TypeNode* b) {
@@ -87,4 +88,10 @@ int type_free(TypeNode* node) {
 
     FREE(node);
     return 0;
+}
+
+TypeNode* type_dup(TypeNode* type) {
+    TypeNode* ret = (TypeNode*)malloc(sizeof(TypeNode));
+    memcpy(ret, type, sizeof(TypeNode));
+    return ret;
 }

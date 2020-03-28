@@ -16,7 +16,7 @@ void symbol_error(int type, int lineno, const char* msg, const char* name) {
 void state_Program(TreeNode* root);
 void state_ExtDefList(TreeNode* root);
 void state_ExtDef(TreeNode* root);
-void state_ExtDecList(TreeNode* root);
+void state_ExtDecList(TreeNode* root, TypeNode* type);
 TypeNode* state_Specifier(TreeNode* root);
 TypeNode* state_StructSpecifier(TreeNode* root);
 void state_OptTag(TreeNode* root);
@@ -32,7 +32,7 @@ void state_DefList(TreeNode* root, TypeNode** type_pos);
 void state_Def(TreeNode* root, TypeNode** type_pos);
 void state_DecList(TreeNode* root, TypeNode* type, TypeNode** type_pos);
 void state_Dec(TreeNode* root, TypeNode* type, TypeNode** type_pos);
-void state_Exp(TreeNode* root);
+TypeNode* state_Exp(TreeNode* root);
 void state_Args(TreeNode* root);
 
 void symtab_build() {
@@ -74,10 +74,25 @@ void state_ExtDef(TreeNode* root) {
         }
     } else {
         // Specifier ExtDecList SEMI
+        // TODO
+        state_ExtDecList(root->children[1], type);
     }
 }
 
-void state_ExtDecList(TreeNode* root) {}
+void state_ExtDecList(TreeNode* root, TypeNode* type) {
+    if (root->size == 1) {
+        // VarDec
+        TypeNode* node = state_VarDec(root->children[0], type_dup(type));
+        if (hashmap_node(symtab, node->name, age_now)) {
+            symbol_error(3, root->lineno, "redefined variable:", node->name);
+            hashmap_delete(symtab, node->name, age_now);
+        }
+        hashmap_insert(symtab, node->name, age_now, node);
+    } else {
+        // VarDec COMMA ExtDecList
+        state_ExtDecList(root->children[2], type);
+    }
+}
 
 TypeNode* state_Specifier(TreeNode* root) {
     if (!root)
@@ -114,8 +129,9 @@ TypeNode* state_StructSpecifier(TreeNode* root) {
 
         age_now++;
         TypeNode* type = type_new_struct(count);
-        type->data_struct.is_type = 1;
+        // type->data_struct.is_type = 1;
         state_DefList(root->children[3], type->data_struct.types);
+        hashmap_delete_age(symtab, age_now);
         age_now--;
 
         if (root->children[1]->size == 1) {
@@ -133,7 +149,17 @@ void state_OptTag(TreeNode* root) {}
 void state_Tag(TreeNode* root) {}
 
 TypeNode* state_VarDec(TreeNode* root, TypeNode* type) {
-    // TODO
+    if (root->size == 1) {
+        // ID
+        type->name = root->children[0]->data_str;
+        type->dimen = 0;
+        return type;
+    } else {
+        // VarDec LB INT RB
+        state_VarDec(root->children[0], type);
+        type->dimen++;
+        return type;
+    }
 }
 
 TypeNode* state_FunDec(TreeNode* root, TypeNode* type) {}
@@ -166,22 +192,46 @@ void state_Def(TreeNode* root, TypeNode** type_pos) {
 }
 
 void state_DecList(TreeNode* root, TypeNode* type, TypeNode** type_pos) {
-    state_Dec(root->children[0], type, type_pos);
-    if (root->size == 3)
-        state_DecList(root->children[2], type, type_pos + 1);
-}
-
-void state_Dec(TreeNode* root, TypeNode* type, TypeNode** type_pos) {
-    // TODO
-    // VarDec
-    TypeNode* node = state_VarDec(root->children[0], type);
+    state_Dec(root->children[0], type_dup(type), type_pos);
     if (root->size == 3) {
-        // VarDec ASSIGNOP Exp
         if (type_pos)
-            symbol_error(15, root->lineno, "init struct member", "");
+            state_DecList(root->children[2], type, type_pos + 1);
+        else
+            state_DecList(root->children[2], type, NULL);
     }
 }
 
-void state_Exp(TreeNode* root) {}
+void state_Dec(TreeNode* root, TypeNode* type, TypeNode** type_pos) {
+    // VarDec
+    TypeNode* node = state_VarDec(root->children[0], type);
+    // printf("%d ", node->dimen);
+    if (root->size == 3) {
+        // VarDec ASSIGNOP Exp
+        if (type_pos) {
+            symbol_error(15, root->lineno, "init struct member:", node->name);
+        } else if (node->dimen != 0) {
+            symbol_error(7, root->lineno, "init array:", node->name);
+        } else {
+            TypeNode* exp = state_Exp(root->children[2]);
+            if (!typeEqual(node, exp))
+                symbol_error(5, root->lineno, "wrong type:", node->name);
+        }
+    }
+    // Insert
+    if (hashmap_node(symtab, node->name, age_now)) {
+        if (type_pos) {
+            symbol_error(15, root->lineno,
+                         "duplicated struct member:", node->name);
+        } else {
+            symbol_error(3, root->lineno, "redefined variable:", node->name);
+        }
+        hashmap_delete(symtab, node->name, age_now);
+    }
+    hashmap_insert(symtab, node->name, age_now, node);
+    if (type_pos)
+        *type_pos = node;
+}
+
+TypeNode* state_Exp(TreeNode* root) {}
 
 void state_Args(TreeNode* root) {}
