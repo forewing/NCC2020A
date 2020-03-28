@@ -4,12 +4,17 @@ struct a {
 	int you;
 };
 
-struct b x;
+struct a x;
+struct a y;
 
 
 //struct a;
 
 int fuck(int x);
+
+int fuck(int x){
+	x = x + 1;
+}
 
 int fuck(int x){
 	x = x + 1;

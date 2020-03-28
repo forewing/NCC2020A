@@ -125,3 +125,13 @@ int hashmap_delete_age(HashMap* map, int age) {
     }
     return 0;
 }
+
+void hashmap_print(HashMap* map) {
+    for (int i = 0; i < HASH_SIZE; i++) {
+        HashNode* ptr = map->nodes[i];
+        while (ptr) {
+            printf("%s\t%d\n", ptr->key, ptr->age);
+            ptr = ptr->next;
+        }
+    }
+}

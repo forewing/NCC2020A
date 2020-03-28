@@ -20,5 +20,8 @@ int main(int argc, char** argv) {
     yyparse();
     // print_syntax_tree();
     symtab_build();
+    hashmap_print(symtab);
+    printf("%d\n", typeEqual(hashmap_value(symtab, "a", -1),
+                             hashmap_value(symtab, "y", -1)));
     return 0;
 }

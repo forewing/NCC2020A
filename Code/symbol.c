@@ -23,9 +23,9 @@ void state_OptTag(TreeNode* root);
 void state_Tag(TreeNode* root);
 TypeNode* state_VarDec(TreeNode* root, TypeNode* type);
 TypeNode* state_FunDec(TreeNode* root, TypeNode* type);
-void state_VarList(TreeNode* root);
-void state_ParamDec(TreeNode* root);
-void state_CompSt(TreeNode* root);
+void state_VarList(TreeNode* root, TypeNode** type_pos);
+TypeNode* state_ParamDec(TreeNode* root);
+void state_CompSt(TreeNode* root, TypeNode* func);
 void state_StmtList(TreeNode* root);
 void state_Stmt(TreeNode* root);
 void state_DefList(TreeNode* root, TypeNode** type_pos);
@@ -67,14 +67,32 @@ void state_ExtDef(TreeNode* root) {
     }
     if (root->children[1]->state_type == FunDec) {
         type = state_FunDec(root->children[1], type);
+        TypeNode* pre = hashmap_value(symtab, type->name, age_now);
+        if (pre) {
+            if (!typeEqual(pre, type)) {
+                symbol_error(19, root->lineno,
+                             "inconsistent declaration of function",
+                             type->name);
+                hashmap_delete(symtab, type->name, age_now);
+                hashmap_insert(symtab, type->name, age_now, type);
+            } else {
+                type = pre;
+            }
+        } else {
+            hashmap_insert(symtab, type->name, age_now, type);
+        }
+
         if (root->children[2]->node_type == NODE_NOTERM) {
             // Specifier FunDec CompSt
-            state_CompSt(root->children[2]);
+            state_CompSt(root->children[2], type);
+            if (type->data_func.is_def) {
+                symbol_error(4, root->lineno, "duplicated define of function",
+                             type->name);
+            }
             type->data_func.is_def = 1;
         }
     } else {
         // Specifier ExtDecList SEMI
-        // TODO
         state_ExtDecList(root->children[1], type);
     }
 }
@@ -107,7 +125,6 @@ TypeNode* state_Specifier(TreeNode* root) {
 }
 
 TypeNode* state_StructSpecifier(TreeNode* root) {
-    // TODO
     if (root->size == 2) {
         // STRUCT Tag
         const char* name = root->children[1]->children[0]->data_str;
@@ -144,9 +161,13 @@ TypeNode* state_StructSpecifier(TreeNode* root) {
     return NULL;
 }
 
-void state_OptTag(TreeNode* root) {}
+void state_OptTag(TreeNode* root) {
+    // Do nothing
+}
 
-void state_Tag(TreeNode* root) {}
+void state_Tag(TreeNode* root) {
+    // Do nothing
+}
 
 TypeNode* state_VarDec(TreeNode* root, TypeNode* type) {
     if (root->size == 1) {
@@ -162,13 +183,46 @@ TypeNode* state_VarDec(TreeNode* root, TypeNode* type) {
     }
 }
 
-TypeNode* state_FunDec(TreeNode* root, TypeNode* type) {}
+TypeNode* state_FunDec(TreeNode* root, TypeNode* type) {
+    TypeNode* args;
+    if (root->size == 4) {
+        // ID LP VarList RP
+        int count = root->children[2]->data_int;
+        args = type_new_struct(count);
+        // age_now++;
+        state_VarList(root->children[2], args->data_struct.types);
+        // hashmap_delete_age(symtab, age_now);
+        // age_now--;
+    } else {
+        // ID LP RP
+        args = type_new_struct(0);
+    }
 
-void state_VarList(TreeNode* root) {}
+    TypeNode* tmp = type_new_func(type, args);
+    tmp->name = root->children[0]->data_str;
+    return tmp;
+}
 
-void state_ParamDec(TreeNode* root) {}
+void state_VarList(TreeNode* root, TypeNode** type_pos) {
+    TypeNode* arg = state_ParamDec(root->children[0]);
+    // if (hashmap_node(symtab, arg->name, age_now)) {
+    //     symbol_error();
+    // }
+    *type_pos = arg;
+    if (root->size == 3) {
+        // ParamDec COMMA VarList
+        state_VarList(root->children[2], type_pos + 1);
+    }
+}
 
-void state_CompSt(TreeNode* root) {}
+TypeNode* state_ParamDec(TreeNode* root) {
+    // Specifier VarDec
+    TypeNode* type = state_Specifier(root->children[0]);
+    state_VarDec(root->children[1], type);
+    return type;
+}
+
+void state_CompSt(TreeNode* root, TypeNode* func) {}
 
 void state_StmtList(TreeNode* root) {}
 

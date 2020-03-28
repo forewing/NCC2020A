@@ -23,5 +23,6 @@ int hashmap_delete(HashMap* map, const char* key, int age);
 HashNode* hashmap_node(HashMap* map, const char* key, int age);
 TypeNode* hashmap_value(HashMap* map, const char* key, int age);
 int hashmap_delete_age(HashMap* map, int age);
+void hashmap_print(HashMap* map);
 
 #endif
