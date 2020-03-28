@@ -24,7 +24,6 @@
     #define LEX_REGISTE(__LEX_TYPE__) \
         LEX_REGISTE_DATA(__LEX_TYPE__, data_int, 0)
 
-    extern int total_lines;
 
 %}
 
@@ -87,8 +86,8 @@ id      {letter_}({letter_}|{digit})*
 "while"     {LEX_REGISTE(WHILE)}
 
     /* Types */
-"int"   {LEX_REGISTE_DATA(TYPE, data_int, TYPE_INT)}
-"float" {LEX_REGISTE_DATA(TYPE, data_int, TYPE_FLOAT)}
+"int"   {LEX_REGISTE_DATA(TYPE, data_int, TYPENAME_INT)}
+"float" {LEX_REGISTE_DATA(TYPE, data_int, TYPENAME_FLOAT)}
 
 {id}    {
     char* t = malloc(strlen(yytext) + 1);

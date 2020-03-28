@@ -1,6 +1,8 @@
 #include "tree.h"
 #include <stdarg.h>
 #include <stdlib.h>
+#include "helper.h"
+#include "syntax.tab.h"
 
 TreeNode* tree_new(const char* name, int size) {
     TreeNode* ret = (TreeNode*)malloc(sizeof(TreeNode));
@@ -27,4 +29,40 @@ void tree_set_children(TreeNode* node, ...) {
         child->parent = node;
     }
     va_end(children);
+}
+
+static void _print_syntax_tree(TreeNode* root, int tabs) {
+    if (root->node_type == NODE_EMPTY) {
+        // Just pass
+        return;
+    }
+    for (int i = 0; i < tabs; i++) {
+        putchar(' ');
+    }
+    if (root->node_type == NODE_NOTERM) {
+        printf("%s (%d)\n", root->name, root->lineno);
+        for (int i = 0; i < root->size; i++) {
+            _print_syntax_tree(root->children[i], tabs + 2);
+        }
+    } else if (root->lex_type == ID) {
+        printf("ID: %s\n", root->data_str);
+    } else if (root->lex_type == TYPE) {
+        printf("TYPE: %s\n",
+               root->data_int == TYPENAME_FLOAT ? "float" : "int");
+    } else if (root->lex_type == INT) {
+        printf("INT: %ld\n", root->data_int);
+    } else if (root->lex_type == FLOAT) {
+        printf("FLOAT: %f\n", root->data_float);
+    } else {
+        printf("%s\n", root->name);
+    }
+}
+
+void print_syntax_tree() {
+    if (bug_number == 0) {
+        if (tree_root->children[0]->size == 0) {
+            tree_root->lineno = total_lines;
+        }
+        _print_syntax_tree(tree_root, 0);
+    }
 }
