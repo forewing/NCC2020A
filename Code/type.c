@@ -3,6 +3,10 @@
 #include <string.h>
 #include "helper.h"
 
+const TypeNode* int_type_entity;
+const TypeNode* float_type_entity;
+const TypeNode* void_type_entity;
+
 int typeEqual(TypeNode* a, TypeNode* b) {
     if (!a || !b)
         return 0;
@@ -36,6 +40,7 @@ int typeEqual(TypeNode* a, TypeNode* b) {
 TypeNode* type_new_invalid() {
     TypeNode* ret = (TypeNode*)malloc(sizeof(TypeNode));
     ret->type = TYPE_INVALID;
+    ret->is_right = 0;
     return ret;
 }
 
@@ -43,6 +48,7 @@ TypeNode* type_new_int(int value) {
     TypeNode* ret = (TypeNode*)malloc(sizeof(TypeNode));
     ret->type = TYPE_INT;
     ret->data_int = value;
+    ret->is_right = 0;
     ret->dimen = 0;
     return ret;
 }
@@ -51,6 +57,7 @@ TypeNode* type_new_float(float value) {
     TypeNode* ret = (TypeNode*)malloc(sizeof(TypeNode));
     ret->type = TYPE_FLOAT;
     ret->data_float = value;
+    ret->is_right = 0;
     ret->dimen = 0;
     return ret;
 }
@@ -60,7 +67,7 @@ TypeNode* type_new_struct(int size) {
     ret->type = TYPE_STRUCT;
     ret->data_struct.size = size;
     ret->data_struct.types = (TypeNode**)malloc(sizeof(TypeNode) * size);
-    ret->data_struct.is_type = 0;
+    ret->is_right = 0;
     ret->dimen = 0;
     return ret;
 }
@@ -70,7 +77,7 @@ TypeNode* type_new_func(TypeNode* ret, TypeNode* args) {
     tmp->type = TYPE_FUNC;
     tmp->data_func.ret = ret;
     tmp->data_func.args = args;
-    tmp->data_func.is_def = 0;
+    ret->is_right = 0;
     return tmp;
 }
 
@@ -93,5 +100,17 @@ int type_free(TypeNode* node) {
 TypeNode* type_dup(TypeNode* type) {
     TypeNode* ret = (TypeNode*)malloc(sizeof(TypeNode));
     memcpy(ret, type, sizeof(TypeNode));
+    return ret;
+}
+
+TypeNode* type_dup_right(TypeNode* type) {
+    TypeNode* ret = type_dup(type);
+    ret->is_right = 1;
+    return ret;
+}
+
+TypeNode* type_dup_left(TypeNode* type) {
+    TypeNode* ret = type_dup(type);
+    ret->is_right = 0;
     return ret;
 }

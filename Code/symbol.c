@@ -1,5 +1,6 @@
 #include "symbol.h"
 #include <stdio.h>
+#include <string.h>
 #include "hash.h"
 #include "helper.h"
 #include "syntax.tab.h"
@@ -33,9 +34,11 @@ void state_Def(TreeNode* root, TypeNode** type_pos);
 void state_DecList(TreeNode* root, TypeNode* type, TypeNode** type_pos);
 void state_Dec(TreeNode* root, TypeNode* type, TypeNode** type_pos);
 TypeNode* state_Exp(TreeNode* root);
-void state_Args(TreeNode* root);
+void state_Args(TreeNode* root, TypeNode** type_pos);
 
 void symtab_build() {
+    if (bug_number != 0)
+        return;
     symtab = hashmap_new();
     age_now = 0;
     state_Program(tree_root);
@@ -85,11 +88,11 @@ void state_ExtDef(TreeNode* root) {
         if (root->children[2]->node_type == NODE_NOTERM) {
             // Specifier FunDec CompSt
             state_CompSt(root->children[2], type);
-            if (type->data_func.is_def) {
+            if (type->is_right) {
                 symbol_error(4, root->lineno, "duplicated define of function",
                              type->name);
             }
-            type->data_func.is_def = 1;
+            type->is_right = 1;
         }
     } else {
         // Specifier ExtDecList SEMI
@@ -146,7 +149,6 @@ TypeNode* state_StructSpecifier(TreeNode* root) {
 
         age_now++;
         TypeNode* type = type_new_struct(count);
-        // type->data_struct.is_type = 1;
         state_DefList(root->children[3], type->data_struct.types);
         hashmap_delete_age(symtab, age_now);
         age_now--;
@@ -155,6 +157,7 @@ TypeNode* state_StructSpecifier(TreeNode* root) {
             hashmap_insert(symtab, root->children[1]->children[0]->data_str,
                            age_now, type);
         }
+        return type;
         // hashmap_insert(symtab, )
     }
 
@@ -342,7 +345,6 @@ void state_Dec(TreeNode* root, TypeNode* type, TypeNode** type_pos) {
 }
 
 TypeNode* state_Exp(TreeNode* root) {
-    // TODO
     TreeNode** children = root->children;
 
     TypeNode* id = NULL;
@@ -364,17 +366,41 @@ TypeNode* state_Exp(TreeNode* root) {
         if (children[0]->state_type == ID) {
             return id;
         } else if (children[0]->state_type == INT) {
-            return type_new_int(children[0]->data_int);
+            return type_dup_right(type_new_int(children[0]->data_int));
         } else {
-            return type_new_float(children[0]->data_float);
+            return type_dup_right(type_new_float(children[0]->data_float));
         }
         return type_new_invalid();
     } else if (children[1]->state_type == LP &&
                children[1]->node_type == NODE_TERM) {
-        // ID LP RP
-        // ID LP Args RP
+        if (id->type == TYPE_INVALID) {
+            return id;
+        }
 
-        // TODO
+        if (id->type != TYPE_FUNC) {
+            symbol_error(11, root->lineno,
+                         "variable is not callable:", id->name);
+            return type_new_invalid();
+        } else if (root->size == 3) {
+            // ID LP RP
+            if (!typeEqual(type_new_struct(0), id->data_func.args)) {
+                symbol_error(9, root->lineno, "arguments mismatch:", id->name);
+                return type_new_invalid();
+            }
+            return type_dup_right(id->data_func.ret);
+        } else {
+            // ID LP Args RP
+            if (children[2]->data_int == id->data_func.args->data_struct.size) {
+                TypeNode* args = type_new_struct((int)children[2]->data_int);
+                state_Args(children[2], args->data_struct.types);
+                if (typeEqual(args, id->data_func.args)) {
+                    // Only success here
+                    return type_dup_right(id->data_func.ret);
+                }
+            }
+            symbol_error(9, root->lineno, "arguments mismatch:", id->name);
+            return type_new_invalid();
+        }
     } else if (root->size == 2) {
         TypeNode* exp = state_Exp(children[1]);
         if (children[0]->state_type == MINUS) {
@@ -396,43 +422,121 @@ TypeNode* state_Exp(TreeNode* root) {
                 return type_new_invalid();
             }
         }
-        return exp;
+        return type_dup_right(exp);
     } else if (children[1]->node_type == NODE_NOTERM) {
         // LP Exp RP
         return state_Exp(root->children[1]);
     } else if (root->size == 3) {
+        TypeNode* left = state_Exp(children[0]);
+        if (!left || left->type == TYPE_INVALID) {
+            return left;
+        }
+        TypeNode* right = NULL;
+        if (children[2]->node_type == NODE_NOTERM) {
+            right = state_Exp(children[2]);
+        }
         switch (children[1]->state_type) {
             case ASSIGNOP:
+                // Exp ASSIGNOP Exp
+                if (!typeEqual(left, right)) {
+                    symbol_error(5, root->lineno,
+                                 "assign between different types", "");
+                    return type_new_invalid();
+                }
+                if (left->is_right) {
+                    symbol_error(6, root->lineno,
+                                 "right value can't be assigned", "");
+                    return type_new_invalid();
+                }
+                return left;
                 break;
             case AND:
             case OR:
+                // Exp AND      Exp
+                // Exp OR       Exp
+                if (!typeEqual(left, type_new_int(1)) ||
+                    !typeEqual(right, type_new_int(1))) {
+                    symbol_error(7, root->lineno,
+                                 "can't do logic operation on types except int",
+                                 "");
+                    return type_new_invalid();
+                }
+                return type_dup_right(left);
                 break;
             case RELOP:
             case PLUS:
             case MINUS:
             case STAR:
             case DIV:
+                // Exp RELOP    Exp
+                // Exp PLUS     Exp
+                // Exp MINUS    Exp
+                // Exp STAR     Exp
+                // Exp DIV      Exp
+                if (!typeEqual(left, right)) {
+                    symbol_error(7, root->lineno,
+                                 "cant't do operation between different types",
+                                 "");
+                    return type_new_invalid();
+                }
+                if (!typeEqual(left, type_new_float(1.1)) &&
+                    !typeEqual(left, type_new_int(1))) {
+                    symbol_error(7, root->lineno,
+                                 "cant't do arithmetic operation on types "
+                                 "except int and float",
+                                 "");
+                    return type_new_invalid();
+                }
+                return type_dup_right(left);
                 break;
             case DOT:
+                // Exp DOT ID
+                if (left->type != TYPE_STRUCT) {
+                    symbol_error(13, root->lineno, "variable not a struct", "");
+                    return type_new_invalid();
+                }
+                TypeNode* ret = NULL;
+                for (int i = 0; i < left->data_struct.size; i++) {
+                    if (!strcmp(left->data_struct.types[i]->name,
+                                children[2]->data_str)) {
+                        ret = left->data_struct.types[i];
+                        break;
+                    }
+                }
+                if (!ret) {
+                    symbol_error(14, root->lineno,
+                                 "unknown field:", children[2]->data_str);
+                    return type_new_invalid();
+                }
+                return ret;
                 break;
         }
-        // Exp ASSIGNOP Exp
-        // Exp AND      Exp
-        // Exp OR       Exp
-        // Exp RELOP    Exp
-        // Exp PLUS     Exp
-        // Exp MINUS    Exp
-        // Exp STAR     Exp
-        // Exp DIV      Exp
-        // Exp DOT ID
+
     } else {
         // Exp LB Exp RB
+        TypeNode* elem = state_Exp(children[0]);
+        if (elem->dimen <= 0) {
+            symbol_error(10, root->lineno, "indexing non-array variable", "");
+            return type_new_invalid();
+        }
+        TypeNode* index = state_Exp(children[2]);
+        if (!typeEqual(index, type_new_int(1))) {
+            symbol_error(12, root->lineno, "index is not int", "");
+            return type_new_invalid();
+        }
+        TypeNode* ret = type_dup(elem);
+        ret->dimen--;
+        return ret;
     }
-    return NULL;
+    return type_new_invalid();
+    // return NULL;
 }
 
-void state_Args(TreeNode* root) {
-    // TODO
-    // Exp COMMA Args
+void state_Args(TreeNode* root, TypeNode** type_pos) {
     // Exp
+    *type_pos = state_Exp(root->children[0]);
+    if (root->size == 3) {
+        // Exp COMMA Args
+        state_Args(root->children[2], type_pos + 1);
+    }
 }

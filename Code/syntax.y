@@ -183,8 +183,8 @@ Exp : Exp ASSIGNOP Exp  {SYN_REGISTE(Exp, $$, @$, $1, $2, $3)}
     | LP error RP       /* ERROR! */
     ;
 
-Args : Exp COMMA Args   {SYN_REGISTE(Args, $$, @$, $1, $2, $3)}
-    | Exp               {SYN_REGISTE(Args, $$, @$, $1)}
+Args : Exp COMMA Args   {SYN_REGISTE(Args, $$, @$, $1, $2, $3) $$->data_int = $3->data_int + 1;}
+    | Exp               {SYN_REGISTE(Args, $$, @$, $1); $$->data_int = 1;}
     ;
 
 %%

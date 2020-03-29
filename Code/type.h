@@ -10,17 +10,16 @@ typedef struct TypeNode {
         struct {
             struct TypeNode** types;
             int size;
-            int is_type;
         } data_struct;
         struct {
             struct TypeNode* ret;
             struct TypeNode* args;
-            int is_def;
         } data_func;
     };
+    const char* name;
     int dimen;
     int type;
-    const char* name;
+    int is_right;
 } TypeNode;
 
 int typeEqual(TypeNode* a, TypeNode* b);
@@ -32,5 +31,7 @@ TypeNode* type_new_struct(int size);
 TypeNode* type_new_func(TypeNode* ret, TypeNode* args);
 int type_free(TypeNode* node);
 TypeNode* type_dup(TypeNode* type);
+TypeNode* type_dup_right(TypeNode* type);
+TypeNode* type_dup_left(TypeNode* type);
 
 #endif
