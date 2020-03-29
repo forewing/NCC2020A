@@ -2,7 +2,7 @@
 #define TREE_H
 
 enum { NODE_TERM, NODE_NOTERM, NODE_EMPTY };
-enum { TYPE_INT, TYPE_FLOAT };
+enum { TYPENAME_INT, TYPENAME_FLOAT };
 enum {
     RELOP_GT,
     RELOP_GE,
@@ -12,13 +12,37 @@ enum {
     RELOP_NE,
 };
 
+enum {
+    Program,
+    ExtDefList,
+    ExtDef,
+    ExtDecList,
+    Specifier,
+    StructSpecifier,
+    OptTag,
+    Tag,
+    VarDec,
+    FunDec,
+    VarList,
+    ParamDec,
+    CompSt,
+    StmtList,
+    Stmt,
+    DefList,
+    Def,
+    DecList,
+    Dec,
+    Exp,
+    Args
+};
+
 typedef struct TreeNode {
     const char* name;
     int size;
 
     int lineno;
     int node_type;
-    int lex_type;
+    int state_type;
     union {
         long data_int;
         float data_float;
@@ -33,5 +57,7 @@ TreeNode* tree_new(const char* name, int size);
 void tree_set_children(TreeNode* node, ...);
 
 extern TreeNode* tree_root;
+
+void print_syntax_tree();
 
 #endif

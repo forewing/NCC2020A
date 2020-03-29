@@ -45,16 +45,18 @@
         28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, \
         11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0
 
+extern int total_lines;
 extern int bug_number;
 #define bug_add bug_number++;
 
 char* strdup2(const char* str);
 
-#define FREE(__ITEM__)      \
-    {                       \
-        if (__ITEM__)       \
-            free(__ITEM__); \
-        __ITEM__ = NULL;    \
+void __free(void* n);
+#define FREE(__ITEM__)        \
+    {                         \
+        if (__ITEM__)         \
+            __free(__ITEM__); \
+        __ITEM__ = NULL;      \
     }
 
 #endif

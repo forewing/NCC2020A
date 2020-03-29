@@ -1,5 +1,38 @@
+struct a {
+	int x, y[1][1][1];
+	float f, k;
+	int you;
+};
+
+struct a x;
+struct a y;
+
+
+//struct a;
+
+int fuck(int x, int y, int k);
+
+int fuck(int x, int y, int k){
+	x = x + 1;
+}
+
+int shit(struct a x){
+	int i;
+}
+
 int main()
 {
 	int i = 1;
 	int j = 2;
+	float f;
+	struct a x;
+	int k[2];
+	shit(x);
+	fuck(1,2,3);
+	f = 1.1;
+	1+1;
+	x.y[0][0][0]=1;
+	if (i()){
+		i = 1;
+	}
 }

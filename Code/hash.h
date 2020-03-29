@@ -1,11 +1,14 @@
 #ifndef HASH_H
 #define HASH_H
 
+#include "type.h"
+
 #define HASH_SIZE 24593
 
 typedef struct HashNode {
     char* key;
-    void* data;
+    int age;
+    TypeNode* data;
     struct HashNode* next;
 } HashNode;
 
@@ -15,9 +18,11 @@ typedef struct HashMap {
 
 unsigned int hash(const char* str);
 HashMap* hashmap_new();
-int hashmap_insert(HashMap* map, const char* key, void* data);
-int hashmap_delete(HashMap* map, const char* key);
-HashNode* hashmap_node(HashMap* map, const char* key);
-void* hashmap_value(HashMap* map, const char* key);
+int hashmap_insert(HashMap* map, const char* key, int age, TypeNode* data);
+int hashmap_delete(HashMap* map, const char* key, int age);
+HashNode* hashmap_node(HashMap* map, const char* key, int age);
+TypeNode* hashmap_value(HashMap* map, const char* key, int age);
+int hashmap_delete_age(HashMap* map, int age);
+void hashmap_print(HashMap* map);
 
 #endif

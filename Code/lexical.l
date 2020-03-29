@@ -15,7 +15,7 @@
         LOG_LEX("(%d)\t" STRING_OF(__LEX_TYPE__) "\t%s\n", yylineno, yytext); \
         yylval = tree_new(STRING_OF(__LEX_TYPE__), 0); \
         yylval->node_type = NODE_TERM; \
-        yylval->lex_type = __LEX_TYPE__; \
+        yylval->state_type = __LEX_TYPE__; \
         yylval->lineno = yylineno; \
         yylval->__LEX_DATA_TYPE__ = __LEX_DATA_VALUE__; \
         return(__LEX_TYPE__); \
@@ -24,7 +24,6 @@
     #define LEX_REGISTE(__LEX_TYPE__) \
         LEX_REGISTE_DATA(__LEX_TYPE__, data_int, 0)
 
-    extern int total_lines;
 
 %}
 
@@ -87,8 +86,8 @@ id      {letter_}({letter_}|{digit})*
 "while"     {LEX_REGISTE(WHILE)}
 
     /* Types */
-"int"   {LEX_REGISTE_DATA(TYPE, data_int, TYPE_INT)}
-"float" {LEX_REGISTE_DATA(TYPE, data_int, TYPE_FLOAT)}
+"int"   {LEX_REGISTE_DATA(TYPE, data_int, TYPENAME_INT)}
+"float" {LEX_REGISTE_DATA(TYPE, data_int, TYPENAME_FLOAT)}
 
 {id}    {
     char* t = malloc(strlen(yytext) + 1);
