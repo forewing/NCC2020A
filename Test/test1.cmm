@@ -10,13 +10,9 @@ struct a y;
 
 //struct a;
 
-int fuck(int x);
+int fuck(int x, int y, int k);
 
-int fuck(int x){
-	x = x + 1;
-}
-
-int fuck(int x){
+int fuck(int x, int y, int k){
 	x = x + 1;
 }
 
@@ -24,5 +20,7 @@ int main()
 {
 	int i = 1;
 	int j = 2;
-	int i;
+
+	int k[2];
+	!k;
 }

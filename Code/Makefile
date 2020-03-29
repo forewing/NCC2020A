@@ -32,7 +32,7 @@ syntax-c: $(YFILE)
 -include $(patsubst %.o, %.d, $(OBJS))
 
 # 定义的一些伪目标
-.PHONY: clean test diff lab1
+.PHONY: clean test diff lab1 gdb
 test:
 ifdef target
 	./parser ../Test/$(target).cmm
@@ -44,6 +44,9 @@ diff:
 ifdef target
 	./parser ../Test/$(target).cmm 2>&1 | diff -Z -B - ../Test/$(target).ans
 endif
+
+gdb: syntax-c lexical
+	$(CC) -g -o parser-gdb $(filter-out $(LFC),$(CFILES)) -lfl -ly
 
 lab1: parser
 	for i in `seq 1 10`; do echo "Testing Lab1/test$$i" && make -s diff target=Lab1/test$$i; done

@@ -6,9 +6,9 @@
 int typeEqual(TypeNode* a, TypeNode* b) {
     if (!a || !b)
         return 0;
+    if (a->type == TYPE_INVALID || b->type == TYPE_INVALID)
+        return 1;
     if (a->type != b->type)
-        return 0;
-    if (a->type == TYPE_INVALID)
         return 0;
     if (a->dimen != b->dimen)
         return 0;

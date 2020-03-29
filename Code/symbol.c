@@ -26,8 +26,8 @@ TypeNode* state_FunDec(TreeNode* root, TypeNode* type);
 void state_VarList(TreeNode* root, TypeNode** type_pos);
 TypeNode* state_ParamDec(TreeNode* root);
 void state_CompSt(TreeNode* root, TypeNode* func);
-void state_StmtList(TreeNode* root, TypeNode* ret);
-void state_Stmt(TreeNode* root, TypeNode* ret);
+void state_StmtList(TreeNode* root, TypeNode* func);
+void state_Stmt(TreeNode* root, TypeNode* func);
 void state_DefList(TreeNode* root, TypeNode** type_pos);
 void state_Def(TreeNode* root, TypeNode** type_pos);
 void state_DecList(TreeNode* root, TypeNode* type, TypeNode** type_pos);
@@ -228,9 +228,11 @@ void state_CompSt(TreeNode* root, TypeNode* func) {
     // Spray args
     if (func) {
         TypeNode* args = func->data_func.args;
-        for (int i = 0; i < args->data_struct.size; i++) {
-            hashmap_insert(symtab, args->data_struct.types[i]->name, age_now,
-                           args->data_struct.types[i]);
+        if (args) {
+            for (int i = 0; i < args->data_struct.size; i++) {
+                hashmap_insert(symtab, args->data_struct.types[i]->name,
+                               age_now, args->data_struct.types[i]);
+            }
         }
     }
 
@@ -239,7 +241,7 @@ void state_CompSt(TreeNode* root, TypeNode* func) {
     // hashmap_print(symtab);
 
     if (func)
-        state_StmtList(root->children[2], func->data_func.ret);
+        state_StmtList(root->children[2], func);
     else
         state_StmtList(root->children[2], NULL);
 
@@ -247,16 +249,38 @@ void state_CompSt(TreeNode* root, TypeNode* func) {
     age_now--;
 }
 
-void state_StmtList(TreeNode* root, TypeNode* ret) {
+void state_StmtList(TreeNode* root, TypeNode* func) {
     if (root->size == 2) {
         // Stmt StmtList
-        state_Stmt(root->children[0], ret);
-        state_StmtList(root->children[1], ret);
+        state_Stmt(root->children[0], func);
+        state_StmtList(root->children[1], func);
     }
 }
 
-void state_Stmt(TreeNode* root, TypeNode* ret) {
-    // TODO
+void state_Stmt(TreeNode* root, TypeNode* func) {
+    if (root->size == 2) {
+        // 2 Exp SEMI
+        state_Exp(root->children[0]);
+    } else if (root->size == 1) {
+        // 1 CompSt
+        state_CompSt(root->children[0], func);
+    } else if (root->children[0]->state_type == RETURN) {
+        // 3 RETURN Exp SEMI
+        TypeNode* exp_ret = state_Exp(root->children[1]);
+        if (!typeEqual(exp_ret, func->data_func.ret)) {
+            symbol_error(8, root->lineno, "return type mismatch", "");
+        }
+    } else {
+        // 5 IF LP Exp RP Stmt
+        // 5 WHILE LP Exp RP Stmt
+        // No check for exp type...
+        state_Stmt(root->children[4], func);
+        if (root->size == 7) {
+            // 7 IF LP Exp RP Stmt ELSE Stmt
+            state_Stmt(root->children[6], func);
+        }
+    }
+    return;
 }
 
 void state_DefList(TreeNode* root, TypeNode** type_pos) {
@@ -319,8 +343,96 @@ void state_Dec(TreeNode* root, TypeNode* type, TypeNode** type_pos) {
 
 TypeNode* state_Exp(TreeNode* root) {
     // TODO
+    TreeNode** children = root->children;
+
+    TypeNode* id = NULL;
+    if (children[0]->state_type == ID && children[0]->node_type == NODE_TERM) {
+        id = hashmap_value(symtab, children[0]->data_str, -1);
+        if (!id) {
+            if (root->size == 0) {
+                symbol_error(1, root->lineno,
+                             "undefined variable:", children[0]->data_str);
+            } else {
+                symbol_error(2, root->lineno,
+                             "undefined function:", children[0]->data_str);
+            }
+            return type_new_invalid();
+        }
+    }
+    if (root->size == 1) {
+        // ID, INT, FLOAT
+        if (children[0]->state_type == ID) {
+            return id;
+        } else if (children[0]->state_type == INT) {
+            return type_new_int(children[0]->data_int);
+        } else {
+            return type_new_float(children[0]->data_float);
+        }
+        return type_new_invalid();
+    } else if (children[1]->state_type == LP &&
+               children[1]->node_type == NODE_TERM) {
+        // ID LP RP
+        // ID LP Args RP
+
+        // TODO
+    } else if (root->size == 2) {
+        TypeNode* exp = state_Exp(children[1]);
+        if (children[0]->state_type == MINUS) {
+            // MINUS Exp
+            if (!typeEqual(exp, type_new_int(1)) &&
+                !typeEqual(exp, type_new_float(1))) {
+                symbol_error(7, root->lineno,
+                             "can't do arithmetic operation on types except "
+                             "int and float",
+                             "");
+                return type_new_invalid();
+            }
+        } else {
+            // NOT Exp
+            if (!typeEqual(exp, type_new_int(1))) {
+                symbol_error(7, root->lineno,
+                             "can't do logic operation on types except int",
+                             "");
+                return type_new_invalid();
+            }
+        }
+        return exp;
+    } else if (children[1]->node_type == NODE_NOTERM) {
+        // LP Exp RP
+        return state_Exp(root->children[1]);
+    } else if (root->size == 3) {
+        switch (children[1]->state_type) {
+            case ASSIGNOP:
+                break;
+            case AND:
+            case OR:
+                break;
+            case RELOP:
+            case PLUS:
+            case MINUS:
+            case STAR:
+            case DIV:
+                break;
+            case DOT:
+                break;
+        }
+        // Exp ASSIGNOP Exp
+        // Exp AND      Exp
+        // Exp OR       Exp
+        // Exp RELOP    Exp
+        // Exp PLUS     Exp
+        // Exp MINUS    Exp
+        // Exp STAR     Exp
+        // Exp DIV      Exp
+        // Exp DOT ID
+    } else {
+        // Exp LB Exp RB
+    }
+    return NULL;
 }
 
 void state_Args(TreeNode* root) {
     // TODO
+    // Exp COMMA Args
+    // Exp
 }

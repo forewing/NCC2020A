@@ -16,10 +16,12 @@ int main(int argc, char** argv) {
             perror(argv[1]);
             return 1;
         }
+    } else {
+        return 1;
     }
     yyparse();
     // print_syntax_tree();
     symtab_build();
-    hashmap_print(symtab);
+    // hashmap_print(symtab);
     return 0;
 }
