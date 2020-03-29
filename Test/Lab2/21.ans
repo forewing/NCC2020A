@@ -1,0 +1,4 @@
+Error type 17 at Line 23: Undefined structure "saleList"
+Error type 14 at Line 18: Non-existence field "date_frm"
+Error type 9 at Line 49: Function "set_ProductSingle" is not applicable for these arguments
+Error type 9 at Line 50: Function "calculateAll" is not applicable for these arguments
