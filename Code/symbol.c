@@ -48,6 +48,18 @@ void state_Program(TreeNode* root) {
     if (!root)
         return;
     state_ExtDefList(root->children[0]);
+
+    for (int i = 0; i < HASH_SIZE; i++) {
+        HashNode* ptr = symtab->nodes[i];
+        while (ptr) {
+            TypeNode* func = ptr->data;
+            if (func->type == TYPE_FUNC && !func->is_right) {
+                symbol_error(18, func->line, "undefined function:", func->name);
+                printf("%d\n", func->is_right);
+            }
+            ptr = ptr->next;
+        }
+    }
 }
 
 void state_ExtDefList(TreeNode* root) {
@@ -70,6 +82,7 @@ void state_ExtDef(TreeNode* root) {
     }
     if (root->children[1]->state_type == FunDec) {
         type = state_FunDec(root->children[1], type);
+        type->line = root->lineno;
         TypeNode* pre = hashmap_value(symtab, type->name, age_now);
         if (pre) {
             if (!typeEqual(pre, type)) {
@@ -89,8 +102,8 @@ void state_ExtDef(TreeNode* root) {
             // Specifier FunDec CompSt
             state_CompSt(root->children[2], type);
             if (type->is_right) {
-                symbol_error(4, root->lineno, "duplicated define of function",
-                             type->name);
+                symbol_error(4, root->lineno,
+                             "duplicated define of function:", type->name);
             }
             type->is_right = 1;
         }
@@ -154,11 +167,15 @@ TypeNode* state_StructSpecifier(TreeNode* root) {
         age_now--;
 
         if (root->children[1]->size == 1) {
-            hashmap_insert(symtab, root->children[1]->children[0]->data_str,
-                           age_now, type);
+            const char* name = root->children[1]->children[0]->data_str;
+            TypeNode* pre = hashmap_value(symtab, name, age_now);
+            if (pre) {
+                symbol_error(16, root->lineno, "struct name duplicated:", name);
+                hashmap_delete(symtab, name, age_now);
+            }
+            hashmap_insert(symtab, name, age_now, type);
         }
         return type;
-        // hashmap_insert(symtab, )
     }
 
     return NULL;

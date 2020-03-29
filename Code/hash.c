@@ -29,8 +29,9 @@ int hashmap_insert(HashMap* map, const char* key, int age, TypeNode* data) {
     unsigned int pos = hash(key);
 
     HashNode* newNode = (HashNode*)malloc(sizeof(HashNode));
-    newNode->data = (TypeNode*)malloc(sizeof(TypeNode));
-    memcpy(newNode->data, data, sizeof(TypeNode));
+    newNode->data = data;
+    // newNode->data = (TypeNode*)malloc(sizeof(TypeNode));
+    // memcpy(newNode->data, data, sizeof(TypeNode));
     newNode->key = strdup2(key);
     newNode->age = age;
     newNode->next = map->nodes[pos];

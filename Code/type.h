@@ -20,6 +20,7 @@ typedef struct TypeNode {
     int dimen;
     int type;
     int is_right;
+    int line;
 } TypeNode;
 
 int typeEqual(TypeNode* a, TypeNode* b);
