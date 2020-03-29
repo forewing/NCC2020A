@@ -20,20 +20,19 @@ int link_Node(struct Node former, struct Node later){
     if(former.nextno!=-1 && later.nextno == -1){
         int result = 0;
         later.nextno = former.nextno;
-        mer.nextno = later.no;
+        former.nextno = later.no;
         return result;
     }
     else if(former.nextno == -1 && later.nextno != -1){
-        result = 1;
         former.nextno = later.no;
-        return result;
+        return former.nextno;
     }
     return -1;
 }
 
 int main(){
     struct Node a, b;
-    int i, a, N = 100;
+    int i, N = 100;
     initial_Node(a);
     initial_Node(b);
     link_Node(a,b);

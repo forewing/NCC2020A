@@ -55,7 +55,7 @@ void state_Program(TreeNode* root) {
             TypeNode* func = ptr->data;
             if (func->type == TYPE_FUNC && !func->is_right) {
                 symbol_error(18, func->line, "undefined function:", func->name);
-                printf("%d\n", func->is_right);
+                // printf("%d\n", func->is_right);
             }
             ptr = ptr->next;
         }
@@ -83,16 +83,17 @@ void state_ExtDef(TreeNode* root) {
     if (root->children[1]->state_type == FunDec) {
         type = state_FunDec(root->children[1], type);
         type->line = root->lineno;
-        TypeNode* pre = hashmap_value(symtab, type->name, age_now);
+        HashNode* pre = hashmap_node(symtab, type->name, age_now);
         if (pre) {
-            if (!typeEqual(pre, type)) {
+            if (!typeEqual(pre->data, type)) {
                 symbol_error(19, root->lineno,
                              "inconsistent declaration of function",
                              type->name);
                 hashmap_delete(symtab, type->name, age_now);
                 hashmap_insert(symtab, type->name, age_now, type);
             } else {
-                type = pre;
+                type->is_right = pre->data->is_right;
+                pre->data = type;
             }
         } else {
             hashmap_insert(symtab, type->name, age_now, type);
@@ -228,7 +229,7 @@ void state_VarList(TreeNode* root, TypeNode** type_pos) {
     // if (hashmap_node(symtab, arg->name, age_now)) {
     //     symbol_error();
     // }
-    *type_pos = arg;
+    *type_pos = type_dup(arg);
     if (root->size == 3) {
         // ParamDec COMMA VarList
         state_VarList(root->children[2], type_pos + 1);
@@ -250,6 +251,7 @@ void state_CompSt(TreeNode* root, TypeNode* func) {
         TypeNode* args = func->data_func.args;
         if (args) {
             for (int i = 0; i < args->data_struct.size; i++) {
+                // printf("insert %s\n", args->data_struct.types[i]->name);
                 hashmap_insert(symtab, args->data_struct.types[i]->name,
                                age_now, args->data_struct.types[i]);
             }
@@ -293,7 +295,7 @@ void state_Stmt(TreeNode* root, TypeNode* func) {
     } else {
         // 5 IF LP Exp RP Stmt
         // 5 WHILE LP Exp RP Stmt
-        // No check for exp type...
+        TypeNode* exp = state_Exp(root->children[2]);
         state_Stmt(root->children[4], func);
         if (root->size == 7) {
             // 7 IF LP Exp RP Stmt ELSE Stmt
@@ -368,7 +370,7 @@ TypeNode* state_Exp(TreeNode* root) {
     if (children[0]->state_type == ID && children[0]->node_type == NODE_TERM) {
         id = hashmap_value(symtab, children[0]->data_str, -1);
         if (!id) {
-            if (root->size == 0) {
+            if (root->size == 1) {
                 symbol_error(1, root->lineno,
                              "undefined variable:", children[0]->data_str);
             } else {
@@ -393,7 +395,7 @@ TypeNode* state_Exp(TreeNode* root) {
         if (id->type == TYPE_INVALID) {
             return id;
         }
-
+        // printf("%s %d\n", id->name, id->type);
         if (id->type != TYPE_FUNC) {
             symbol_error(11, root->lineno,
                          "variable is not callable:", id->name);

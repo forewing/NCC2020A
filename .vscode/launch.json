@@ -10,9 +10,9 @@
             "request": "launch",
             "program": "${workspaceFolder}/Code/parser-gdb",
             "args": [
-                "../Test/impossible1.cmm"
+                "../Test/test1.cmm"
             ],
-            "stopAtEntry": true,
+            "stopAtEntry": false,
             "cwd": "${workspaceFolder}/Code",
             "environment": [],
             "externalConsole": false,

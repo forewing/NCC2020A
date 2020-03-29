@@ -1,4 +1,4 @@
-Error type 15 at Line 7: Initialized variable "price_sum" in struct
-Error type 17 at Line 11: Undefined structure "Summ"
-Error type 10 at Line 19: "j" is not an array
-Error type 1 at Line 26: Undefined variable "sum_result1"
+Error type 15 at Line 7: init struct member: price_sum.
+Error type 17 at Line 11: struct not defined: Summ.
+Error type 10 at Line 19: indexing non-array variable .
+Error type 1 at Line 26: undefined variable: sum_result1.

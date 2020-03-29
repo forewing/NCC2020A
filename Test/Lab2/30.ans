@@ -1,2 +1,2 @@
-Error type 5 at Line 41: Type mismatched for assignment
-Error type 5 at Line 43: Type mismatched for assignment
+Error type 5 at Line 41: assign between different types .
+Error type 5 at Line 43: assign between different types .

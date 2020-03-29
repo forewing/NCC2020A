@@ -1,1 +1,1 @@
-Error type 15 at Line 11: Initialized struct field
+Error type 15 at Line 11: init struct member: weight1.

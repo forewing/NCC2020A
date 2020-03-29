@@ -51,6 +51,10 @@ gdb: syntax-c lexical
 lab1: parser
 	for i in `seq 1 10`; do echo "Testing Lab1/test$$i" && make -s diff target=Lab1/test$$i; done
 
+lab2: parser
+	for i in `seq 1 30`; do echo "Testing Lab2/$$i" && make -s diff target=Lab2/$$i; done
+
+
 clean:
 	rm -f parser lex.yy.c syntax.tab.c syntax.tab.h syntax.output
 	rm -f $(OBJS) $(OBJS:.o=.d)
