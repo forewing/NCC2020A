@@ -83,6 +83,8 @@ void state_ExtDef(TreeNode* root) {
         return;
     }
     if (root->children[1]->state_type == FunDec) {
+        // Specifier FunDec CompSt
+        // Specifier FunDec SEMI
         type = state_FunDec(root->children[1], type);
         type->line = root->lineno;
         HashNode* pre = hashmap_node(symtab, type->name, age_now);
@@ -147,14 +149,14 @@ TypeNode* state_Specifier(TreeNode* root) {
             return type_new_int(0);
         return type_new_float(0);
     }
-    return state_StructSpecifier(root->children[0]);
+    return type_dup_left(state_StructSpecifier(root->children[0]));
 }
 
 TypeNode* state_StructSpecifier(TreeNode* root) {
     if (root->size == 2) {
         // STRUCT Tag
         const char* name = root->children[1]->children[0]->data_str;
-        TypeNode* type = hashmap_value(symtab, name, -1);
+        TypeNode* type = hashmap_value(symtab, name, AGE_STRUCT);
         if (!type) {
             symbol_error(17, root->lineno, "struct not defined:", name);
             type = type_new_invalid();
@@ -191,8 +193,6 @@ TypeNode* state_StructSpecifier(TreeNode* root) {
 
         return type;
     }
-
-    return NULL;
 }
 
 void state_OptTag(TreeNode* root) {
@@ -345,6 +345,7 @@ void state_Def(TreeNode* root, TypeNode** type_pos) {
 void state_DecList(TreeNode* root, TypeNode* type, TypeNode** type_pos) {
     state_Dec(root->children[0], type_dup(type), type_pos);
     if (root->size == 3) {
+        // Dec COMMA DecList
         if (type_pos)
             state_DecList(root->children[2], type, type_pos + 1);
         else
