@@ -1,6 +1,3 @@
-{
-  "require": {
-    "a": [[4, 10]]
-  },
-  "allow": [[19, 10], [9, 15], [9, 16]]
-}
+Error type 19 at Line 10: inconsistent declaration of function compare.
+Error type 4 at Line 10: duplicated define of function: compare.
+Error type 9 at Line 15: arguments mismatch: compare.

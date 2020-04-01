@@ -87,14 +87,15 @@ void state_ExtDef(TreeNode* root) {
         type->line = root->lineno;
         HashNode* pre = hashmap_node(symtab, type->name, age_now);
         if (pre) {
+            type->is_right = pre->data->is_right;
             if (!typeEqual(pre->data, type)) {
                 symbol_error(19, root->lineno,
                              "inconsistent declaration of function",
                              type->name);
+
                 hashmap_delete(symtab, type->name, age_now);
                 hashmap_insert(symtab, type->name, age_now, type);
             } else {
-                type->is_right = pre->data->is_right;
                 pre->data = type;
             }
         } else {
@@ -172,6 +173,12 @@ TypeNode* state_StructSpecifier(TreeNode* root) {
 
         // Register to global first
         TypeNode* type = type_new_struct(count);
+
+        age_now++;
+        state_DefList(root->children[3], type->data_struct.types);
+        hashmap_delete_age(symtab, age_now);
+        age_now--;
+
         if (root->children[1]->size == 1) {
             const char* name = root->children[1]->children[0]->data_str;
             TypeNode* pre = hashmap_value(symtab, name, AGE_STRUCT);
@@ -181,11 +188,6 @@ TypeNode* state_StructSpecifier(TreeNode* root) {
             }
             hashmap_insert(symtab, name, AGE_STRUCT, type);
         }
-
-        age_now++;
-        state_DefList(root->children[3], type->data_struct.types);
-        hashmap_delete_age(symtab, age_now);
-        age_now--;
 
         return type;
     }
@@ -359,7 +361,7 @@ void state_Dec(TreeNode* root, TypeNode* type, TypeNode** type_pos) {
         if (type_pos) {
             symbol_error(15, root->lineno, "init struct member:", node->name);
         } else if (node->dimen != 0) {
-            symbol_error(7, root->lineno, "init array:", node->name);
+            symbol_error(5, root->lineno, "init array:", node->name);
         } else {
             TypeNode* exp = state_Exp(root->children[2]);
             if (!typeEqual(node, exp))

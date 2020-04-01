@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/Code/parser-gdb",
             "args": [
-                "../Test/test1.cmm"
+                "../Test/Lab2/31.cmm"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/Code",

@@ -1,6 +1,2 @@
-{
-  "require": {
-    "a": [[4, 1], [4, 6]]
-  },
-  "allow": [[19, 1], [19, 6]]
-}
+Error type 19 at Line 6: inconsistent declaration of function func.
+Error type 4 at Line 6: duplicated define of function: func.

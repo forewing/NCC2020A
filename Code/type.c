@@ -82,18 +82,18 @@ TypeNode* type_new_func(TypeNode* ret, TypeNode* args) {
 }
 
 int type_free(TypeNode* node) {
-    if (!node)
-        return -1;
+    // if (!node)
+    //     return -1;
 
-    if (node->type == TYPE_STRUCT) {
-        for (int i = 0; i < node->data_struct.size; i++)
-            type_free(node->data_struct.types[i]);
-    } else if (node->type == TYPE_FUNC) {
-        type_free(node->data_func.ret);
-        type_free(node->data_func.args);
-    }
+    // if (node->type == TYPE_STRUCT) {
+    //     for (int i = 0; i < node->data_struct.size; i++)
+    //         type_free(node->data_struct.types[i]);
+    // } else if (node->type == TYPE_FUNC) {
+    //     type_free(node->data_func.ret);
+    //     type_free(node->data_func.args);
+    // }
 
-    FREE(node);
+    // FREE(node);
     return 0;
 }
 

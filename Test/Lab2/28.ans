@@ -1,4 +1,3 @@
 Error type 19 at Line 22: inconsistent declaration of function Calculation3.
 Error type 19 at Line 29: inconsistent declaration of function Compare.
-Error type 18 at Line 29: undefined function: Compare.
 Error type 18 at Line 22: undefined function: Calculation3.

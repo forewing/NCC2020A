@@ -1,9 +1,4 @@
-{
-  "require": {
-    "a": [[15, 8]],
-    "b": [[7, 31]],
-    "c": [[5, 33]],
-    "d": [[2, 47]]
-  },
-  "allow": [[5, 47]]
-}
+Error type 15 at Line 8: init struct member: strong.
+Error type 7 at Line 31: cant't do operation between different types .
+Error type 5 at Line 33: assign between different types .
+Error type 2 at Line 47: undefined function: letDogout.

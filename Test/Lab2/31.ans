@@ -1,5 +1,1 @@
-{
-  "require": {
-    "a": [[17, 3]]
-  }
-}
+Error type 17 at Line 3: struct not defined: T.
