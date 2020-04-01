@@ -187,15 +187,6 @@ TypeNode* state_StructSpecifier(TreeNode* root) {
         hashmap_delete_age(symtab, age_now);
         age_now--;
 
-        // if (root->children[1]->size == 1) {
-        //     const char* name = root->children[1]->children[0]->data_str;
-        //     TypeNode* pre = hashmap_value(symtab, name, AGE_STRUCT);
-        //     if (pre) {
-        //         symbol_error(16, root->lineno, "struct name duplicated:",
-        //         name); hashmap_delete(symtab, name, AGE_STRUCT);
-        //     }
-        //     hashmap_insert(symtab, name, AGE_STRUCT, type);
-        // }
         return type;
     }
 
