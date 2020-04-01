@@ -6,6 +6,8 @@
 #include "syntax.tab.h"
 #include "tree.h"
 
+#define AGE_STRUCT 0
+
 HashMap* symtab;
 int age_now;
 
@@ -122,6 +124,12 @@ void state_ExtDecList(TreeNode* root, TypeNode* type) {
             symbol_error(3, root->lineno, "redefined variable:", node->name);
             hashmap_delete(symtab, node->name, age_now);
         }
+        TypeNode* pre = hashmap_value(symtab, node->name, AGE_STRUCT);
+        if (pre && pre->type == TYPE_STRUCT) {
+            symbol_error(
+                3, root->lineno,
+                "variable name conflict with struct name:", node->name);
+        }
         hashmap_insert(symtab, node->name, age_now, node);
     } else {
         // VarDec COMMA ExtDecList
@@ -153,6 +161,7 @@ TypeNode* state_StructSpecifier(TreeNode* root) {
         return type;
     } else {
         // STRUCT OptTag LC DefList RC
+
         int count = 0;
         TreeNode* defList = root->children[3];
         while (defList->size) {
@@ -161,21 +170,32 @@ TypeNode* state_StructSpecifier(TreeNode* root) {
         }
         // printf("%d\n", count);
 
-        age_now++;
+        // Register to global first
         TypeNode* type = type_new_struct(count);
+        if (root->children[1]->size == 1) {
+            const char* name = root->children[1]->children[0]->data_str;
+            TypeNode* pre = hashmap_value(symtab, name, AGE_STRUCT);
+            if (pre) {
+                symbol_error(16, root->lineno, "struct name duplicated:", name);
+                hashmap_delete(symtab, name, AGE_STRUCT);
+            }
+            hashmap_insert(symtab, name, AGE_STRUCT, type);
+        }
+
+        age_now++;
         state_DefList(root->children[3], type->data_struct.types);
         hashmap_delete_age(symtab, age_now);
         age_now--;
 
-        if (root->children[1]->size == 1) {
-            const char* name = root->children[1]->children[0]->data_str;
-            TypeNode* pre = hashmap_value(symtab, name, age_now);
-            if (pre) {
-                symbol_error(16, root->lineno, "struct name duplicated:", name);
-                hashmap_delete(symtab, name, age_now);
-            }
-            hashmap_insert(symtab, name, age_now, type);
-        }
+        // if (root->children[1]->size == 1) {
+        //     const char* name = root->children[1]->children[0]->data_str;
+        //     TypeNode* pre = hashmap_value(symtab, name, AGE_STRUCT);
+        //     if (pre) {
+        //         symbol_error(16, root->lineno, "struct name duplicated:",
+        //         name); hashmap_delete(symtab, name, AGE_STRUCT);
+        //     }
+        //     hashmap_insert(symtab, name, AGE_STRUCT, type);
+        // }
         return type;
     }
 
@@ -251,9 +271,16 @@ void state_CompSt(TreeNode* root, TypeNode* func) {
         TypeNode* args = func->data_func.args;
         if (args) {
             for (int i = 0; i < args->data_struct.size; i++) {
+                const char* name = args->data_struct.types[i]->name;
+                TypeNode* pre = hashmap_value(symtab, name, AGE_STRUCT);
+                if (pre && pre->type == TYPE_STRUCT) {
+                    symbol_error(
+                        3, root->lineno,
+                        "arg name conflict with global struct name:", name);
+                }
                 // printf("insert %s\n", args->data_struct.types[i]->name);
-                hashmap_insert(symtab, args->data_struct.types[i]->name,
-                               age_now, args->data_struct.types[i]);
+                hashmap_insert(symtab, name, age_now,
+                               args->data_struct.types[i]);
             }
         }
     }
@@ -357,6 +384,12 @@ void state_Dec(TreeNode* root, TypeNode* type, TypeNode** type_pos) {
             symbol_error(3, root->lineno, "redefined variable:", node->name);
         }
         hashmap_delete(symtab, node->name, age_now);
+    }
+    TypeNode* global = hashmap_value(symtab, node->name, AGE_STRUCT);
+    if (!type_pos && global && global->type == TYPE_STRUCT) {
+        symbol_error(
+            3, root->lineno,
+            "variable name conflict with global struct name:", node->name);
     }
     hashmap_insert(symtab, node->name, age_now, node);
     if (type_pos)
