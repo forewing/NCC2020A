@@ -1,0 +1,3 @@
+[submodule "Code/compilers-tests"]
+	path = Code/compilers-tests
+	url = git@git.jbesu.com:Mirrors/compilers-tests.git
