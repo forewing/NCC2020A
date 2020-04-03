@@ -1,0 +1,7 @@
+int a;
+
+struct a x;
+
+int main(){
+	int q;
+}

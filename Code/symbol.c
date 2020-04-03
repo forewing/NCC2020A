@@ -160,9 +160,11 @@ TypeNode* state_StructSpecifier(TreeNode* root) {
         if (!type) {
             symbol_error(17, root->lineno, "struct not defined:", name);
             type = type_new_invalid();
+        } else if (type->type != TYPE_STRUCT) {
+            symbol_error(16, root->lineno,
+                         "struct name duplicated with variable:", name);
+            type = type_new_invalid();
         }
-
-        // TODO
         return type;
     } else {
         // STRUCT OptTag LC DefList RC
