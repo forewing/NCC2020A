@@ -9,3 +9,8 @@
 
 /Test/tmp
 /Test/**.out
+
+/Lab
+report.pdf
+parser
+*.zip
