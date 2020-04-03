@@ -161,6 +161,8 @@ TypeNode* state_StructSpecifier(TreeNode* root) {
             symbol_error(17, root->lineno, "struct not defined:", name);
             type = type_new_invalid();
         }
+
+        // TODO
         return type;
     } else {
         // STRUCT OptTag LC DefList RC
@@ -223,10 +225,10 @@ TypeNode* state_FunDec(TreeNode* root, TypeNode* type) {
         // ID LP VarList RP
         int count = root->children[2]->data_int;
         args = type_new_struct(count);
-        // age_now++;
+        age_now++;
         state_VarList(root->children[2], args->data_struct.types);
-        // hashmap_delete_age(symtab, age_now);
-        // age_now--;
+        hashmap_delete_age(symtab, age_now);
+        age_now--;
     } else {
         // ID LP RP
         args = type_new_struct(0);
@@ -239,9 +241,17 @@ TypeNode* state_FunDec(TreeNode* root, TypeNode* type) {
 
 void state_VarList(TreeNode* root, TypeNode** type_pos) {
     TypeNode* arg = state_ParamDec(root->children[0]);
-    // if (hashmap_node(symtab, arg->name, age_now)) {
-    //     symbol_error();
-    // }
+    if (hashmap_node(symtab, arg->name, age_now)) {
+        symbol_error(3, root->lineno, "parameter name redefined:", arg->name);
+    } else {
+        hashmap_insert(symtab, arg->name, age_now, arg);
+    }
+    TypeNode* global = hashmap_value(symtab, arg->name, AGE_STRUCT);
+    if (global && global->type == TYPE_STRUCT) {
+        symbol_error(
+            3, root->lineno,
+            "parameter name duplicated with global struct:", arg->name);
+    }
     *type_pos = type_dup(arg);
     if (root->size == 3) {
         // ParamDec COMMA VarList
@@ -269,7 +279,7 @@ void state_CompSt(TreeNode* root, TypeNode* func) {
                 if (pre && pre->type == TYPE_STRUCT) {
                     symbol_error(
                         3, root->lineno,
-                        "arg name conflict with global struct name:", name);
+                        "parameter name duplicated with global struct:", name);
                 }
                 // printf("insert %s\n", args->data_struct.types[i]->name);
                 hashmap_insert(symtab, name, age_now,

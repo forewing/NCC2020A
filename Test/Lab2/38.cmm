@@ -1,0 +1,10 @@
+int fuck(int x, int x, int k);
+
+int fuck(int x, int y, int k){
+	x = x + 1;
+}
+
+int main()
+{
+	
+}
