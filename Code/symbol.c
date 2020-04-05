@@ -1,6 +1,8 @@
 #include "symbol.h"
+
 #include <stdio.h>
 #include <string.h>
+
 #include "hash.h"
 #include "helper.h"
 #include "syntax.tab.h"
@@ -328,6 +330,9 @@ void state_Stmt(TreeNode* root, TypeNode* func) {
         // 5 IF LP Exp RP Stmt
         // 5 WHILE LP Exp RP Stmt
         TypeNode* exp = state_Exp(root->children[2]);
+        if (!typeEqual(exp, type_new_int(0))) {
+            symbol_error(7, root->lineno, "condition must be int", "");
+        }
         state_Stmt(root->children[4], func);
         if (root->size == 7) {
             // 7 IF LP Exp RP Stmt ELSE Stmt
