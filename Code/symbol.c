@@ -1,6 +1,8 @@
 #include "symbol.h"
+
 #include <stdio.h>
 #include <string.h>
+
 #include "hash.h"
 #include "helper.h"
 #include "syntax.tab.h"
@@ -120,21 +122,19 @@ void state_ExtDef(TreeNode* root) {
 }
 
 void state_ExtDecList(TreeNode* root, TypeNode* type) {
-    if (root->size == 1) {
-        // VarDec
-        TypeNode* node = state_VarDec(root->children[0], type_dup(type));
-        if (hashmap_node(symtab, node->name, age_now)) {
-            symbol_error(3, root->lineno, "redefined variable:", node->name);
-            hashmap_delete(symtab, node->name, age_now);
-        }
-        TypeNode* pre = hashmap_value(symtab, node->name, AGE_STRUCT);
-        if (pre && pre->type == TYPE_STRUCT) {
-            symbol_error(
-                3, root->lineno,
-                "variable name conflict with struct name:", node->name);
-        }
-        hashmap_insert(symtab, node->name, age_now, node);
-    } else {
+    // VarDec
+    TypeNode* node = state_VarDec(root->children[0], type_dup(type));
+    if (hashmap_node(symtab, node->name, age_now)) {
+        symbol_error(3, root->lineno, "redefined variable:", node->name);
+        hashmap_delete(symtab, node->name, age_now);
+    }
+    TypeNode* pre = hashmap_value(symtab, node->name, AGE_STRUCT);
+    if (pre && pre->type == TYPE_STRUCT) {
+        symbol_error(3, root->lineno,
+                     "variable name conflict with struct name:", node->name);
+    }
+    hashmap_insert(symtab, node->name, age_now, node);
+    if (root->size == 3) {
         // VarDec COMMA ExtDecList
         state_ExtDecList(root->children[2], type);
     }
@@ -328,6 +328,9 @@ void state_Stmt(TreeNode* root, TypeNode* func) {
         // 5 IF LP Exp RP Stmt
         // 5 WHILE LP Exp RP Stmt
         TypeNode* exp = state_Exp(root->children[2]);
+        if (!typeEqual(exp, type_new_int(0))) {
+            symbol_error(7, root->lineno, "condition must be int", "");
+        }
         state_Stmt(root->children[4], func);
         if (root->size == 7) {
             // 7 IF LP Exp RP Stmt ELSE Stmt

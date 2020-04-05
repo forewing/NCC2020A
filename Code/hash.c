@@ -1,6 +1,8 @@
 #include "hash.h"
+
 #include <stdlib.h>
 #include <string.h>
+
 #include "helper.h"
 #include "type.h"
 
@@ -135,4 +137,5 @@ void hashmap_print(HashMap* map) {
             ptr = ptr->next;
         }
     }
+    printf("============\n");
 }
