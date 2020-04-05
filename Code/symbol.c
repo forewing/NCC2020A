@@ -122,21 +122,19 @@ void state_ExtDef(TreeNode* root) {
 }
 
 void state_ExtDecList(TreeNode* root, TypeNode* type) {
-    if (root->size == 1) {
-        // VarDec
-        TypeNode* node = state_VarDec(root->children[0], type_dup(type));
-        if (hashmap_node(symtab, node->name, age_now)) {
-            symbol_error(3, root->lineno, "redefined variable:", node->name);
-            hashmap_delete(symtab, node->name, age_now);
-        }
-        TypeNode* pre = hashmap_value(symtab, node->name, AGE_STRUCT);
-        if (pre && pre->type == TYPE_STRUCT) {
-            symbol_error(
-                3, root->lineno,
-                "variable name conflict with struct name:", node->name);
-        }
-        hashmap_insert(symtab, node->name, age_now, node);
-    } else {
+    // VarDec
+    TypeNode* node = state_VarDec(root->children[0], type_dup(type));
+    if (hashmap_node(symtab, node->name, age_now)) {
+        symbol_error(3, root->lineno, "redefined variable:", node->name);
+        hashmap_delete(symtab, node->name, age_now);
+    }
+    TypeNode* pre = hashmap_value(symtab, node->name, AGE_STRUCT);
+    if (pre && pre->type == TYPE_STRUCT) {
+        symbol_error(3, root->lineno,
+                     "variable name conflict with struct name:", node->name);
+    }
+    hashmap_insert(symtab, node->name, age_now, node);
+    if (root->size == 3) {
         // VarDec COMMA ExtDecList
         state_ExtDecList(root->children[2], type);
     }
