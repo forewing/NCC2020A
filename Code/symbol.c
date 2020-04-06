@@ -372,18 +372,7 @@ void state_Dec(TreeNode* root, TypeNode* type, TypeNode** type_pos) {
     // VarDec
     TypeNode* node = state_VarDec(root->children[0], type);
     // printf("%d ", node->dimen);
-    if (root->size == 3) {
-        // VarDec ASSIGNOP Exp
-        if (type_pos) {
-            symbol_error(15, root->lineno, "init struct member:", node->name);
-        } else if (node->dimen != 0) {
-            symbol_error(5, root->lineno, "init array:", node->name);
-        } else {
-            TypeNode* exp = state_Exp(root->children[2]);
-            if (!typeEqual(node, exp))
-                symbol_error(5, root->lineno, "wrong type:", node->name);
-        }
-    }
+
     // Insert
     if (hashmap_node(symtab, node->name, age_now)) {
         if (type_pos) {
@@ -403,6 +392,19 @@ void state_Dec(TreeNode* root, TypeNode* type, TypeNode** type_pos) {
     hashmap_insert(symtab, node->name, age_now, node);
     if (type_pos)
         *type_pos = node;
+
+    if (root->size == 3) {
+        // VarDec ASSIGNOP Exp
+        if (type_pos) {
+            symbol_error(15, root->lineno, "init struct member:", node->name);
+        } else if (node->dimen != 0) {
+            symbol_error(5, root->lineno, "init array:", node->name);
+        } else {
+            TypeNode* exp = state_Exp(root->children[2]);
+            if (!typeEqual(node, exp))
+                symbol_error(5, root->lineno, "wrong type:", node->name);
+        }
+    }
 }
 
 TypeNode* state_Exp(TreeNode* root) {
