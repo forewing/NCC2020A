@@ -58,5 +58,6 @@ SymNode* type_dup_left(SymNode* type);
 extern const SymNode int_entity;
 extern const SymNode float_entity;
 extern const SymNode void_entity;
+extern const SymNode invalid_entity;
 
 #endif
