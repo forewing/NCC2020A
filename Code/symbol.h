@@ -15,22 +15,22 @@ enum SYMBOL_TYPE {
     TYPE_INVALID
 };
 
-typedef struct SymbolNode {
+typedef struct SymNode {
     union {
         int data_int;
         float data_float;
         struct {
-            struct SymbolNode* next;
+            struct SymNode* next;
             int dimen;
             int size;
         } data_array;
         struct {
-            struct SymbolNode** types;
+            struct SymNode** types;
             int size;
         } data_struct;
         struct {
-            struct SymbolNode* ret;
-            struct SymbolNode* args;
+            struct SymNode* ret;
+            struct SymNode* args;
         } data_func;
     };
     const char* name;
@@ -38,25 +38,25 @@ typedef struct SymbolNode {
     int type;
     int is_right;
     int line;
-} SymbolNode;
+} SymNode;
 
-int typeEqual(SymbolNode* a, SymbolNode* b);
+int typeEqual(SymNode* a, SymNode* b);
 
-SymbolNode* type_new();
-SymbolNode* type_new_invalid();
-SymbolNode* type_new_int(int value);
-SymbolNode* type_new_float(float value);
-SymbolNode* type_new_array(SymbolNode* next);
-SymbolNode* type_new_struct(int size);
-SymbolNode* type_new_func(SymbolNode* ret, SymbolNode* args);
+SymNode* type_new();
+SymNode* type_new_invalid();
+SymNode* type_new_int(int value);
+SymNode* type_new_float(float value);
+SymNode* type_new_array(SymNode* next);
+SymNode* type_new_struct(int size);
+SymNode* type_new_func(SymNode* ret, SymNode* args);
 
-int type_free(SymbolNode* node);
-SymbolNode* type_dup(SymbolNode* type);
-SymbolNode* type_dup_right(SymbolNode* type);
-SymbolNode* type_dup_left(SymbolNode* type);
+int type_free(SymNode* node);
+SymNode* type_dup(SymNode* type);
+SymNode* type_dup_right(SymNode* type);
+SymNode* type_dup_left(SymNode* type);
 
-extern const SymbolNode int_entity;
-extern const SymbolNode float_entity;
-extern const SymbolNode void_entity;
+extern const SymNode int_entity;
+extern const SymNode float_entity;
+extern const SymNode void_entity;
 
 #endif

@@ -1,13 +1,13 @@
 #include "symbol.h"
 
-const SymbolNode int_entity =
+const SymNode int_entity =
     {.data_int = 0, "CONST_INT_ENTITY", 0, TYPE_INT, 1, 0};
-const SymbolNode float_entity =
+const SymNode float_entity =
     {.data_float = 0.0, "CONST_FLOAT_ENTITY", 0, TYPE_FLOAT, 1, 0};
-const SymbolNode void_entity =
+const SymNode void_entity =
     {.data_struct = {NULL, 0}, "CONST_VOID_ENTITY", 0, TYPE_STRUCT, 1, 0};
 
-int typeEqual(SymbolNode* a, SymbolNode* b) {
+int typeEqual(SymNode* a, SymNode* b) {
     if (!a || !b)
         return 0;
     if (a->type == TYPE_INVALID || b->type == TYPE_INVALID)
@@ -36,8 +36,8 @@ int typeEqual(SymbolNode* a, SymbolNode* b) {
     return 1;
 }
 
-SymbolNode* type_new() {
-    SymbolNode* ret = (SymbolNode*)malloc(sizeof(SymbolNode));
+SymNode* type_new() {
+    SymNode* ret = (SymNode*)malloc(sizeof(SymNode));
     ret->name = NULL;
     ret->offset = 0;
     ret->type = TYPE_INVALID;
@@ -46,28 +46,28 @@ SymbolNode* type_new() {
     return ret;
 }
 
-SymbolNode* type_new_invalid() {
-    SymbolNode* ret = type_new();
+SymNode* type_new_invalid() {
+    SymNode* ret = type_new();
     ret->type = TYPE_INVALID;
     return ret;
 }
 
-SymbolNode* type_new_int(int value) {
-    SymbolNode* ret = type_new();
+SymNode* type_new_int(int value) {
+    SymNode* ret = type_new();
     ret->type = TYPE_INT;
     ret->data_int = value;
     return ret;
 }
 
-SymbolNode* type_new_float(float value) {
-    SymbolNode* ret = type_new();
+SymNode* type_new_float(float value) {
+    SymNode* ret = type_new();
     ret->type = TYPE_FLOAT;
     ret->data_float = value;
     return ret;
 }
 
-SymbolNode* type_new_array(SymbolNode* next) {
-    SymbolNode* ret = type_new();
+SymNode* type_new_array(SymNode* next) {
+    SymNode* ret = type_new();
     ret->type = TYPE_ARRAY;
     ret->data_array.next = next;
     ret->data_array.size = 0;
@@ -78,23 +78,23 @@ SymbolNode* type_new_array(SymbolNode* next) {
     return ret;
 }
 
-SymbolNode* type_new_struct(int size) {
-    SymbolNode* ret = type_new();
+SymNode* type_new_struct(int size) {
+    SymNode* ret = type_new();
     ret->type = TYPE_STRUCT;
     ret->data_struct.size = size;
-    ret->data_struct.types = (SymbolNode**)malloc(sizeof(SymbolNode) * size);
+    ret->data_struct.types = (SymNode**)malloc(sizeof(SymNode) * size);
     return ret;
 }
 
-SymbolNode* type_new_func(SymbolNode* ret, SymbolNode* args) {
-    SymbolNode* tmp = type_new();
+SymNode* type_new_func(SymNode* ret, SymNode* args) {
+    SymNode* tmp = type_new();
     tmp->type = TYPE_FUNC;
     tmp->data_func.ret = ret;
     tmp->data_func.args = args;
     return tmp;
 }
 
-int type_free(SymbolNode* node) {
+int type_free(SymNode* node) {
     // if (!node)
     //     return -1;
 
@@ -110,20 +110,20 @@ int type_free(SymbolNode* node) {
     return 0;
 }
 
-SymbolNode* type_dup(SymbolNode* type) {
-    SymbolNode* ret = (SymbolNode*)malloc(sizeof(SymbolNode));
-    memcpy(ret, type, sizeof(SymbolNode));
+SymNode* type_dup(SymNode* type) {
+    SymNode* ret = (SymNode*)malloc(sizeof(SymNode));
+    memcpy(ret, type, sizeof(SymNode));
     return ret;
 }
 
-SymbolNode* type_dup_right(SymbolNode* type) {
-    SymbolNode* ret = type_dup(type);
+SymNode* type_dup_right(SymNode* type) {
+    SymNode* ret = type_dup(type);
     ret->is_right = 1;
     return ret;
 }
 
-SymbolNode* type_dup_left(SymbolNode* type) {
-    SymbolNode* ret = type_dup(type);
+SymNode* type_dup_left(SymNode* type) {
+    SymNode* ret = type_dup(type);
     ret->is_right = 0;
     return ret;
 }
