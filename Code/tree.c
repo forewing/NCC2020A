@@ -1,8 +1,4 @@
 #include "tree.h"
-#include <stdarg.h>
-#include <stdlib.h>
-#include "helper.h"
-#include "syntax.tab.h"
 
 TreeNode* tree_new(const char* name, int size) {
     TreeNode* ret = (TreeNode*)malloc(sizeof(TreeNode));
@@ -44,14 +40,14 @@ static void _print_syntax_tree(TreeNode* root, int tabs) {
         for (int i = 0; i < root->size; i++) {
             _print_syntax_tree(root->children[i], tabs + 2);
         }
-    } else if (root->state_type == ID) {
+    } else if (root->state_type == STATE_ID) {
         printf("ID: %s\n", root->data_str);
-    } else if (root->state_type == TYPE) {
+    } else if (root->state_type == STATE_TYPE) {
         printf("TYPE: %s\n",
                root->data_int == TYPENAME_FLOAT ? "float" : "int");
-    } else if (root->state_type == INT) {
+    } else if (root->state_type == STATE_INT) {
         printf("INT: %ld\n", root->data_int);
-    } else if (root->state_type == FLOAT) {
+    } else if (root->state_type == STATE_FLOAT) {
         printf("FLOAT: %f\n", root->data_float);
     } else {
         printf("%s\n", root->name);

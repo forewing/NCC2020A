@@ -5,6 +5,7 @@
     #include "syntax.tab.h"
     #include "helper.h"
     #include "tree.h"
+    #include "state.h"
 
     #define lex_error(__msg__, __text__) { \
         fprintf(stderr, "Error type A at Line %d: %s%s.\n", yylineno, __msg__, __text__); \
@@ -15,7 +16,7 @@
         LOG_LEX("(%d)\t" STRING_OF(__LEX_TYPE__) "\t%s\n", yylineno, yytext); \
         yylval = tree_new(STRING_OF(__LEX_TYPE__), 0); \
         yylval->node_type = NODE_TERM; \
-        yylval->state_type = __LEX_TYPE__; \
+        yylval->state_type = TO_STATE(__LEX_TYPE__); \
         yylval->lineno = yylineno; \
         yylval->__LEX_DATA_TYPE__ = __LEX_DATA_VALUE__; \
         return(__LEX_TYPE__); \
@@ -44,14 +45,14 @@ id      {letter_}({letter_}|{digit})*
     LOG_LEX("Block comment start at Line: %d.\n", yylineno);
     while(1) {
         int c;
-        while ((c = input()) != '*' && c != 0);
+        while ((c = input()) != '*' && c != 0 && c != EOF);
         if (c == '*') {
             while ((c = input()) == '*');
             if (c == '/') {
                 LOG_LEX("Block comment ends at Line: %d.\n", yylineno);
                 break;
             }
-        } else if (c == 0){
+        } else if (c == 0 || c == EOF){
             lex_error("Unexcepted EOF in block comment, maybe you forget: ", "*/");
             break;
         }
