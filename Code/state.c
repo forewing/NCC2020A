@@ -18,6 +18,7 @@ void symbol_error(int type, int lineno, const char* msg, const char* name) {
 #define rch5 CHILD(5)
 #define rch6 CHILD(6)
 #define rsz root->size
+#define rln root->lineno
 
 void state_Program(TreeNode* root);
 void state_ExtDefList(TreeNode* root);
@@ -96,6 +97,8 @@ void state_ExtDef(TreeNode* root) {
 void state_ExtDecList(TreeNode* root, SymNode* type) {}
 
 SymNode* state_Specifier(TreeNode* root) {
+    // All the return value should be dup before assign
+
     if (rch0->state_type == STATE_TYPE) {
         // TYPE
         switch (rch0->data_int) {
@@ -120,11 +123,11 @@ SymNode* state_StructSpecifier(TreeNode* root) {
         const char* name = state_Tag(rch1);
         SymNode* type = symtab_lookup_root(name);
         if (!type) {
-            symbol_error(17, root->lineno, "struct not defined: ", name);
+            symbol_error(17, rln, "struct not defined: ", name);
             return &invalid_entity;
         }
         if (type->type != TYPE_STRUCT) {
-            symbol_error(16, root->lineno,
+            symbol_error(16, rln,
                          "struct name duplicated with variable: ", name);
             return &invalid_entity;
         }
@@ -137,7 +140,24 @@ SymNode* state_StructSpecifier(TreeNode* root) {
         size += defList->children[0]->children[1]->data_int;
         defList = defList->children[1];
     }
+    SymNode* type = type_new_struct(size);
+    symtab_push();
+    state_DefList(rch3, type->data_struct.types);
+    symtab_pop();
+
+    const char* name = state_OptTag(rch1);
+    if (name) {
+        SymNode* pre = symtab_lookup_root(name);
+        if (pre) {
+            symbol_error(16, rln, "struct name duplicated:", name);
+        } else {
+            symtab_insert_root(name, type_dup_right(type));
+        }
+    }
+
+    return type;
 }
+
 const char* state_OptTag(TreeNode* root) {
     if (rsz == 1) {
         // ID
@@ -159,9 +179,80 @@ SymNode* state_ParamDec(TreeNode* root) {}
 void state_CompSt(TreeNode* root, SymNode* func) {}
 void state_StmtList(TreeNode* root, SymNode* func) {}
 void state_Stmt(TreeNode* root, SymNode* func) {}
-void state_DefList(TreeNode* root, SymNode** type_pos) {}
-void state_Def(TreeNode* root, SymNode** type_pos) {}
-void state_DecList(TreeNode* root, SymNode* type, SymNode** type_pos) {}
-void state_Dec(TreeNode* root, SymNode* type, SymNode** type_pos) {}
+
+void state_DefList(TreeNode* root, SymNode** type_pos) {
+    if (rsz == 0) {
+        // Empty
+        return;
+    }
+    // Def DefList
+    state_Def(rch0, type_pos);
+    if (type_pos) {
+        state_DefList(rch1, type_pos + rch0->children[1]->data_int);
+    } else {
+        state_DefList(rch1, NULL);
+    }
+}
+
+void state_Def(TreeNode* root, SymNode** type_pos) {
+    // Specifier DecList SEMI
+    SymNode* type = state_Specifier(rch0);
+    state_DecList(rch1, type, type_pos);
+}
+
+void state_DecList(TreeNode* root, SymNode* type, SymNode** type_pos) {
+    // Dec
+    state_Dec(rch0, type_dup_left(type), type_pos);
+    if (rsz == 3) {
+        // Dec COMMA DecList
+        if (type_pos)
+            state_Declist(rch2, type, type_pos + 1);
+        else
+            state_DecList(rch2, type, NULL);
+    }
+}
+
+void state_Dec(TreeNode* root, SymNode* type, SymNode** type_pos) {
+    // type already duped
+    // VarDec
+    SymNode* node = state_VarDec(rch0, type);
+    if (root->size == 3) {
+        // VarDec ASSIGNOP Exp
+        if (type_pos) {
+            // In struct
+            symbol_error(15, rln, "init struct member: ", node->name);
+        } else if (node->type == TYPE_ARRAY) {
+            // Is array
+            symbol_error(5, rln, "init array: ", node->name);
+        } else {
+            SymNode* exp = state_Exp(rch2);
+            if (!typeEqual(node, exp))
+                symbol_error(5, rln, "conflict init type: ", node->name);
+        }
+    }
+    // Insert
+    if (symtab_lookup_last(node->name)) {
+        // Conflict in current
+        if (type_pos) {
+            // In struct
+            symbol_error(15, rln, "duplicated struct member: ", node->name);
+        } else {
+            // Variable
+            symbol_error(3, rln, "redefined variable: ", node->name);
+        }
+    } else {
+        SymNode* global = symtab_lookup_root(node->name);
+        if (!type_pos && global && global->type == TYPE_STRUCT) {
+            // Variable conflict with global struct
+            symbol_error(
+                3, rln,
+                "variable name conflict with global struct name: ", node->name);
+        }
+        symtab_insert_last(node->name, type);
+        if (type_pos)
+            *type_pos = node;
+    }
+}
+
 SymNode* state_Exp(TreeNode* root) {}
 void state_Args(TreeNode* root, SymNode** type_pos) {}

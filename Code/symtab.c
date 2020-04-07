@@ -3,6 +3,23 @@
 HashMap* symtab;
 HashMap* symtab_root;
 
+void symtab_push() {
+    HashMap* new_map = hashmap_new();
+    new_map->next = symtab;
+    symtab = new_map;
+}
+
+void symtab_pop() {
+    HashMap* next = symtab->next;
+    if (next) {
+        hashmap_free(symtab);
+        symtab = next;
+    } else {
+        // Depth error
+        assert(0);
+    }
+}
+
 SymNode* symtab_lookup(HashMap* tab, const char* key) {
     if (tab)
         return hashmap_value(tab, key);
