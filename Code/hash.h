@@ -11,7 +11,7 @@
 
 typedef struct HashNode {
     char* key;
-    SymbolNode* data;
+    SymNode* data;
     struct HashNode* next;
 } HashNode;
 
@@ -23,10 +23,10 @@ typedef struct HashMap {
 unsigned int hash(const char* str);
 HashMap* hashmap_new();
 void hashmap_free(HashMap* map);
-int hashmap_insert(HashMap* map, const char* key, SymbolNode* data);
+int hashmap_insert(HashMap* map, const char* key, SymNode* data);
 int hashmap_delete(HashMap* map, const char* key);
 HashNode* hashmap_node(HashMap* map, const char* key);
-SymbolNode* hashmap_value(HashMap* map, const char* key);
+SymNode* hashmap_value(HashMap* map, const char* key);
 void hashmap_print(HashMap* map);
 
 #define HASHNODE_FREE(__NODE__)    \

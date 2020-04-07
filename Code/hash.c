@@ -12,6 +12,7 @@ HashMap* hashmap_new() {
     HashMap* ret = (HashMap*)malloc(sizeof(HashMap));
     for (int i = 0; i < HASH_SIZE; i++)
         ret->nodes[i] = NULL;
+    ret->next = NULL;
     return ret;
 }
 
@@ -26,7 +27,7 @@ void hashmap_free(HashMap* map) {
     }
 }
 
-int hashmap_insert(HashMap* map, const char* key, SymbolNode* data) {
+int hashmap_insert(HashMap* map, const char* key, SymNode* data) {
     if (hashmap_node(map, key) != NULL)
         return -1;  // Duplicated
 
@@ -54,7 +55,7 @@ HashNode* hashmap_node(HashMap* map, const char* key) {
     return NULL;
 }
 
-SymbolNode* hashmap_value(HashMap* map, const char* key) {
+SymNode* hashmap_value(HashMap* map, const char* key) {
     HashNode* node = hashmap_node(map, key);
     if (node == NULL)
         return NULL;
