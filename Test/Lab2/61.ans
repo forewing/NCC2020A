@@ -1,0 +1,4 @@
+Error type 9 at Line 24: arguments mismatch: quickSort.
+Error type 17 at Line 31: struct not defined: NotDefined.
+Error type 14 at Line 36: unknown field: nme.
+Error type 11 at Line 43: variable is not callable: q.
