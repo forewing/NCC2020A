@@ -1,10 +1,8 @@
 #include <stdio.h>
 #include <string.h>
-#include "hash.h"
-#include "symbol.h"
+
 #include "syntax.tab.h"
 #include "tree.h"
-#include "type.h"
 #include "yy.h"
 
 int bug_number = 0;
@@ -20,8 +18,6 @@ int main(int argc, char** argv) {
         return 1;
     }
     yyparse();
-    // print_syntax_tree();
-    symtab_build();
-    // hashmap_print(symtab);
+    print_syntax_tree();
     return 0;
 }
