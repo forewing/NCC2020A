@@ -90,15 +90,14 @@ void state_ExtDef(TreeNode* root) {
 
     SymNode* func = state_FunDec(rch1, spec);
     func->line = rch1->lineno;
-    SymNode* pre = symtab_lookup_now(func->name);
+    HashNode* pre = symtab_place_now(func->name);
     if (pre) {
-        func->is_right = pre->is_right;
-        if (!typeEqual(func, pre)) {
+        func->is_right = pre->data->is_right;
+        if (!typeEqual(func, pre->data)) {
             symbol_error(19, rln,
                          "inconsistent declaration of function: ", func->name);
-        } else {
-            func = pre;
         }
+        pre->data = func;
     } else {
         symtab_insert_now(func->name, func);
     }
@@ -280,8 +279,7 @@ void state_VarList(TreeNode* root, SymNode** type_pos) {
 SymNode* state_ParamDec(TreeNode* root) {
     // Specifier VarDec
     SymNode* type = type_dup_left(state_Specifier(rch0));
-    state_VarDec(rch1, type);
-    return type;
+    return state_VarDec(rch1, type);
 }
 
 void state_CompSt(TreeNode* root, SymNode* ret, SymNode* args) {
@@ -551,16 +549,14 @@ SymNode* state_Exp(TreeNode* root) {
         return ret;
     } else if (rsz == 4) {
         // Exp LB Exp RB
-        SymNode* elem = state_Exp(rch0);
-        if (elem->type != TYPE_ARRAY) {
+        if (exp1->type != TYPE_ARRAY) {
             symbol_error(10, rln, "indexing non-array variable", "");
             return type_new_invalid();
         }
-        SymNode* index = state_Exp(rch2);
-        if (!typeEqual(index, &int_entity)) {
+        if (!typeEqual(exp2, &int_entity)) {
             symbol_error(12, rln, "index is not int", "");
         }
-        return elem->data_array.next;
+        return exp1->data_array.next;
     }
 
     switch (rch1->state_type) {

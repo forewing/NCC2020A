@@ -11,6 +11,11 @@ extern HashMap* symtab_root;
 void symtab_push();
 void symtab_pop();
 
+HashNode* symtab_place(HashMap* tab, const char* key);
+HashNode* symtab_place_root(const char* key);
+HashNode* symtab_place_now(const char* key);
+HashNode* symtab_place_all(const char* key);
+
 SymNode* symtab_lookup(HashMap* tab, const char* key);
 SymNode* symtab_lookup_root(const char* key);
 SymNode* symtab_lookup_now(const char* key);

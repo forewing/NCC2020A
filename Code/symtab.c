@@ -20,6 +20,31 @@ void symtab_pop() {
     }
 }
 
+HashNode* symtab_place(HashMap* tab, const char* key) {
+    if (tab)
+        return hashmap_node(tab, key);
+    return NULL;
+}
+
+HashNode* symtab_place_root( const char* key) {
+    return symtab_place(symtab_root, key);
+}
+
+HashNode* symtab_place_now( const char* key) {
+    return symtab_place(symtab, key);
+}
+
+HashNode* symtab_place_all(const char* key) {
+    HashMap* ptr = symtab;
+    while (ptr) {
+        HashNode* tmp = symtab_place(ptr, key);
+        if (tmp)
+            return tmp;
+        ptr = ptr->next;
+    }
+    return NULL;
+}
+
 SymNode* symtab_lookup(HashMap* tab, const char* key) {
     if (tab)
         return hashmap_value(tab, key);

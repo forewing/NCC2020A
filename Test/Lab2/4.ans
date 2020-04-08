@@ -1,2 +1,3 @@
 Error type 19 at Line 5: inconsistent declaration of function: math_calculator.
 Error type 4 at Line 5: duplicated define of function: math_calculator.
+Error type 9 at Line 11: arguments mismatch: math_calculator.
