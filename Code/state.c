@@ -143,13 +143,13 @@ SymNode* state_Specifier(TreeNode* root) {
         // TYPE
         switch (rch0->data_int) {
             case TYPENAME_INT:
-                return &int_entity;
+                return type_new_int(0);
                 break;
             case TYPENAME_FLOAT:
-                return &float_entity;
+                return type_new_float(0.0);
                 break;
             default:
-                return &invalid_entity;
+                return type_new_invalid();
         }
     } else {
         // StructSpecifier
@@ -164,12 +164,12 @@ SymNode* state_StructSpecifier(TreeNode* root) {
         SymNode* type = symtab_lookup_root(name);
         if (!type) {
             symbol_error(17, rln, "struct not defined: ", name);
-            return &invalid_entity;
+            return type_new_invalid();
         }
         if (type->type != TYPE_STRUCT) {
             symbol_error(16, rln,
                          "struct name duplicated with variable: ", name);
-            return &invalid_entity;
+            return type_new_invalid();
         }
         return type;
     }
@@ -191,6 +191,8 @@ SymNode* state_StructSpecifier(TreeNode* root) {
         if (pre) {
             symbol_error(16, rln, "struct name duplicated:", name);
         } else {
+            SymNode* entity = type_dup_right(type);
+
             symtab_insert_root(name, type_dup_right(type));
         }
     }
@@ -369,7 +371,7 @@ void state_DecList(TreeNode* root, SymNode* type, SymNode** type_pos) {
     if (rsz == 3) {
         // Dec COMMA DecList
         if (type_pos)
-            state_Declist(rch2, type, type_pos + 1);
+            state_DecList(rch2, type, type_pos + 1);
         else
             state_DecList(rch2, type, NULL);
     }
@@ -419,5 +421,205 @@ void state_Dec(TreeNode* root, SymNode* type, SymNode** type_pos) {
     }
 }
 
-SymNode* state_Exp(TreeNode* root) {}
-void state_Args(TreeNode* root, SymNode** type_pos) {}
+SymNode* state_Exp(TreeNode* root) {
+    if (rch0->state_type == STATE_INT) {
+        // INT
+        SymNode* type = type_new_int(rch0->data_int);
+        type->is_right = 1;
+        return type;
+    } else if (rch0->state_type == STATE_FLOAT) {
+        // FLOAT
+        SymNode* type = type_new_float(rch0->data_float);
+        type->is_right = 1;
+        return type;
+    }
+
+    if (rch0->state_type == STATE_ID) {
+        SymNode* id = symtab_lookup_all(rch0->data_str);
+        if (rsz == 1) {
+            // ID
+            if (!id) {
+                symbol_error(1, rln, "undefined variable: ", rch0->data_str);
+                return type_new_invalid();
+            }
+            return id;
+        }
+        // ID LP Args RP
+        // ID LP RP
+        if (id->type == TYPE_INVALID) {
+            return id;
+        }
+        if (!id) {
+            symbol_error(2, rln, "undefined function: ", rch0->data_str);
+            return type_new_invalid();
+        }
+        if (id->type != TYPE_FUNC) {
+            symbol_error(11, rln, "variable is not callable: ", id->name);
+            return type_new_invalid();
+        }
+        if (rsz == 3) {
+            // ID LP RP
+            if (!typeEqual(&void_entity, id->data_func.args)) {
+                symbol_error(9, rln, "arguments mismatch: ", id->name);
+            }
+            return type_dup_right(id->data_func.ret);
+        } else {
+            // ID LP Args RP
+            if (rch2->data_int == id->data_func.args->data_struct.size) {
+                SymNode* args = type_new_struct(rch2->data_int);
+                state_Args(rch2, args->data_struct.types);
+                if (typeEqual(args, id->data_func.args)) {
+                    // Only success here
+                    return type_dup_right(id->data_func.ret);
+                }
+            }
+            // Fail here
+            symbol_error(9, rln, "arguments mismatch: ", id->name);
+            return type_new_invalid();
+        }
+    }
+
+    if (rch0->state_type == STATE_LP) {
+        // LP Exp RP
+        return state_Exp(rch1);
+    }
+
+    // if (rsz == )
+    SymNode* exp1 = NULL;
+    if (rch0->state_type == STATE_Exp) {
+        // others
+        exp1 = state_Exp(rch0);
+    } else {
+        // MINUS Exp
+        // NOT Exp
+        exp1 = state_Exp(rch1);
+    }
+
+    SymNode* exp2 = NULL;
+    if (rsz >= 3 && rch2->state_type == STATE_Exp) {
+        exp2 = state_Exp(rch2);
+    }
+
+    if (exp1->type == TYPE_INVALID) {
+        return type_new_invalid();
+    }
+    if (exp2 && exp2->type == TYPE_INVALID) {
+        return type_new_invalid();
+    }
+
+    if (rsz == 2) {
+        if (rch0->state_type == STATE_MINUS) {
+            // MINUS Exp
+            if (!typeEqual(exp1, &int_entity) &&
+                !typeEqual(exp1, &float_entity)) {
+                symbol_error(7, rln,
+                             "can't do arithmetic operation on types except "
+                             "int and float",
+                             "");
+                return type_new_invalid();
+            }
+        } else {
+            // NOT Exp
+            if (!typeEqual(exp1, &int_entity)) {
+                symbol_error(
+                    7, rln, "can't do logic operation on types except int", "");
+                return type_new_invalid();
+            }
+        }
+        return type_dup_right(exp1);
+    }
+
+    if (rch1->state_type == STATE_DOT) {
+        // Exp DOT ID
+        if (exp1->type != TYPE_STRUCT) {
+            symbol_error(13, rln, "variable not a struct", "");
+            return type_new_invalid();
+        }
+        SymNode* ret = NULL;
+        for (int i = 0; i < exp1->data_struct.size; i++) {
+            if (!strcmp(exp1->data_struct.types[i]->name, rch2->data_str)) {
+                ret = exp1->data_struct.types[i];
+                break;
+            }
+        }
+        if (!ret) {
+            symbol_error(14, rln, "unknown field: ", rch2->data_str);
+            return type_new_invalid();
+        }
+        return ret;
+    } else if (rsz == 4) {
+        // Exp LB Exp RB
+        SymNode* elem = state_Exp(rch0);
+        if (elem->type != TYPE_ARRAY) {
+            symbol_error(10, rln, "indexing non-array variable", "");
+            return type_new_invalid();
+        }
+        SymNode* index = state_Exp(rch2);
+        if (!typeEqual(index, &int_entity)) {
+            symbol_error(12, rln, "index is not int", "");
+        }
+        return elem->data_array.next;
+    }
+
+    switch (rch1->state_type) {
+        case STATE_ASSIGNOP:
+            // Exp ASSIGNOP Exp
+            if (!typeEqual(exp1, exp2)) {
+                symbol_error(5, rln, "assign between different types", "");
+                return type_new_invalid();
+            }
+            if (exp1->is_right) {
+                symbol_error(6, rln, "right value can't be assigned", "");
+                return type_new_invalid();
+            }
+            return exp1;
+            break;
+        case STATE_AND:
+        case STATE_OR:
+            // Exp AND Exp
+            // Exp OR Exp
+            if (!typeEqual(exp1, &int_entity) ||
+                !typeEqual(exp2, &int_entity)) {
+                symbol_error(
+                    7, rln, "can't do logic operation on types except int", "");
+                return type_new_invalid();
+            }
+            return type_dup_right(exp1);
+            break;
+        case STATE_RELOP:
+        case STATE_PLUS:
+        case STATE_MINUS:
+        case STATE_STAR:
+        case STATE_DIV:
+            // Exp RELOP Exp
+            // Exp PLUS Exp
+            // Exp MINUS Exp
+            // Exp STAR Exp
+            // Exp DIV Exp
+            if (!typeEqual(exp1, exp2)) {
+                symbol_error(7, rln,
+                             "cant't do operation between different types", "");
+                return type_new_invalid();
+            }
+            if (!typeEqual(exp1, &int_entity) &&
+                !typeEqual(exp1, &float_entity)) {
+                symbol_error(7, rln,
+                             "cant't do arithmetic operation on types "
+                             "except int and float",
+                             "");
+                return type_new_invalid();
+            }
+            return type_dup_right(exp1);
+            break;
+    }
+    return type_new_invalid();
+}
+
+void state_Args(TreeNode* root, SymNode** type_pos) {
+    // Exp
+    *type_pos = state_Exp(rch0);
+    if (rsz == 3) {
+        // Exp COMMA Args
+        state_Args(rch2, type_pos + 1);
+    }
+}

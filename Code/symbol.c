@@ -9,7 +9,7 @@ const SymNode void_entity =
 const SymNode invalid_entity =
     {.data_int = 0, "CONST_INVALID_ENTITY", 0, TYPE_INVALID, 0, 0};
 
-int typeEqual(SymNode* a, SymNode* b) {
+int typeEqual(const SymNode* a, const SymNode* b) {
     if (!a || !b)
         return 0;
     if (a->type == TYPE_INVALID || b->type == TYPE_INVALID)
@@ -112,20 +112,36 @@ int type_free(SymNode* node) {
     return 0;
 }
 
-SymNode* type_dup(SymNode* type) {
+SymNode* type_dup(const SymNode* type, int right) {
     SymNode* ret = (SymNode*)malloc(sizeof(SymNode));
     memcpy(ret, type, sizeof(SymNode));
+
+    if (right == 0) {
+        ret->is_right = 0;
+    } else if (right == 1) {
+        ret->is_right = 1;
+    }
+
+    if (ret->type == TYPE_ARRAY) {
+        ret->data_array.next = type_dup(ret->data_array.next, right);
+    } else if (ret->type == TYPE_STRUCT) {
+        ret->data_struct.types =
+            (SymNode**)malloc(sizeof(SymNode*) * ret->data_struct.size);
+        for (int i = 0; i < ret->data_struct.size; i++) {
+            ret->data_struct.types[i] =
+                type_dup(type->data_struct.types[i], right);
+        }
+    } else if (ret->type == TYPE_FUNC) {
+        ret->data_func.ret = type_dup(type->data_func.ret, right);
+        ret->data_func.args = type_dup(type->data_func.args, right);
+    }
+
     return ret;
 }
 
-SymNode* type_dup_right(SymNode* type) {
-    SymNode* ret = type_dup(type);
-    ret->is_right = 1;
-    return ret;
+SymNode* type_dup_left(const SymNode* type) {
+    return type_dup(type, 0);
 }
-
-SymNode* type_dup_left(SymNode* type) {
-    SymNode* ret = type_dup(type);
-    ret->is_right = 0;
-    return ret;
+SymNode* type_dup_right(const SymNode* type) {
+    return type_dup(type, 1);
 }

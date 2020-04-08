@@ -40,7 +40,7 @@ typedef struct SymNode {
     int line;
 } SymNode;
 
-int typeEqual(SymNode* a, SymNode* b);
+int typeEqual(const SymNode* a, const SymNode* b);
 
 SymNode* type_new();
 SymNode* type_new_invalid();
@@ -51,9 +51,9 @@ SymNode* type_new_struct(int size);
 SymNode* type_new_func(SymNode* ret, SymNode* args);
 
 int type_free(SymNode* node);
-SymNode* type_dup(SymNode* type);
-SymNode* type_dup_right(SymNode* type);
-SymNode* type_dup_left(SymNode* type);
+SymNode* type_dup(const SymNode* type, int right);
+SymNode* type_dup_left(const SymNode* type);
+SymNode* type_dup_right(const SymNode* type);
 
 extern const SymNode int_entity;
 extern const SymNode float_entity;

@@ -1,6 +1,8 @@
 #ifndef SYMTAB_H
 #define SYMTAB_H
 
+#include <assert.h>
+
 #include "hash.h"
 
 extern HashMap* symtab;
