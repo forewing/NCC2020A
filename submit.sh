@@ -24,5 +24,6 @@ else
     TARGET_ZIP="${STUID}.zip"
 fi
 
+rm -rf *.zip
 zip -q -r ${TARGET_ZIP} Lab
 echo "Compressed into ${TARGET_ZIP}"
