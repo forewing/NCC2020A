@@ -1,3 +1,3 @@
 Error type 1 at Line 14: undefined variable: p.
 Error type 3 at Line 34: redefined variable: tem.
-Error type 5 at Line 37: assign between different types .
+Error type 5 at Line 37: assign between different types.
