@@ -52,7 +52,7 @@ lab1: parser
 	for i in `seq 1 10`; do echo "Testing Lab1/test$$i" && make -s diff target=Lab1/test$$i; done
 
 lab2: parser
-	for i in `seq 1 69`; do echo "Testing Lab2/$$i" && make -s diff target=Lab2/$$i; done
+	for i in `seq 1 39`; do echo "Testing Lab2/$$i" && make -s diff target=Lab2/$$i; done
 
 
 clean:
