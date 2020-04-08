@@ -17,14 +17,16 @@ HashMap* hashmap_new() {
 }
 
 void hashmap_free(HashMap* map) {
-    for (int i = 0; i < HASH_SIZE; i++) {
-        HashNode* ptr = map->nodes[i];
-        while (ptr) {
-            HashNode* tmp = ptr;
-            ptr = ptr->next;
-            HASHNODE_FREE(tmp);
-        }
-    }
+    // for (int i = 0; i < HASH_SIZE; i++) {
+    //     HashNode* ptr = map->nodes[i];
+    //     while (ptr) {
+    //         HashNode* tmp = ptr;
+    //         ptr = ptr->next;
+    //         HASHNODE_FREE(tmp);
+    //     }
+    // }
+    if (map->nodes)
+        free(map->nodes);
 }
 
 int hashmap_insert(HashMap* map, const char* key, SymNode* data) {
