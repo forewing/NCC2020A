@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "state.h"
 #include "syntax.tab.h"
 #include "tree.h"
 #include "yy.h"
@@ -18,6 +19,7 @@ int main(int argc, char** argv) {
         return 1;
     }
     yyparse();
-    print_syntax_tree();
+    // print_syntax_tree();
+    symtab_build();
     return 0;
 }

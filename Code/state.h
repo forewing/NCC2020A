@@ -54,4 +54,6 @@ enum STATE {
 
 #define TO_STATE(__ORIGIN_NAME__) STATE_##__ORIGIN_NAME__
 
+void symtab_build();
+
 #endif

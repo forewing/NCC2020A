@@ -1,2 +1,2 @@
-Error type 19 at Line 6: inconsistent declaration of function func.
+Error type 19 at Line 6: inconsistent declaration of function: func.
 Error type 4 at Line 6: duplicated define of function: func.
