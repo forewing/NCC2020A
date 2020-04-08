@@ -45,6 +45,7 @@ void state_Args(TreeNode* root, SymNode** type_pos);
 void symtab_build() {
     if (bug_number != 0)
         return;
+    struct_table = hashmap_new();
     symtab = hashmap_new();
     symtab_root = symtab;
     state_Program(tree_root);
@@ -120,8 +121,8 @@ void state_ExtDecList(TreeNode* root, SymNode* type) {
         // Conflict
         symbol_error(3, rln, "redefined variable: ", node->name);
     } else {
-        SymNode* global = symtab_lookup_root(node->name);
-        if (global && global->type == TYPE_STRUCT) {
+        SymNode* global = symtab_lookup(struct_table, node->name);
+        if (global) {
             // Conflict with global struct name
             symbol_error(3, rln, "variable name conflict with struct name: ",
                          node->name);
@@ -160,14 +161,9 @@ SymNode* state_StructSpecifier(TreeNode* root) {
     if (rsz == 2) {
         // STRUCT Tag
         const char* name = state_Tag(rch1);
-        SymNode* type = symtab_lookup_root(name);
+        SymNode* type = symtab_lookup(struct_table, name);
         if (!type) {
             symbol_error(17, rln, "struct not defined: ", name);
-            return type_new_invalid();
-        }
-        if (type->type != TYPE_STRUCT) {
-            symbol_error(16, rln,
-                         "struct name duplicated with variable: ", name);
             return type_new_invalid();
         }
         return type;
@@ -186,13 +182,15 @@ SymNode* state_StructSpecifier(TreeNode* root) {
 
     const char* name = state_OptTag(rch1);
     if (name) {
-        SymNode* pre = symtab_lookup_root(name);
+        SymNode* pre = symtab_lookup(struct_table, name);
         if (pre) {
             symbol_error(16, rln, "struct name duplicated: ", name);
         } else {
             SymNode* entity = type_dup_right(type);
-
-            symtab_insert_root(name, type_dup_right(type));
+            symtab_insert(struct_table, name, entity);
+        }
+        if (symtab_lookup_root(name)) {
+            symbol_error(16, rln, "struct name duplicated: ", name);
         }
     }
 
@@ -262,8 +260,8 @@ void state_VarList(TreeNode* root, SymNode** type_pos) {
         symtab_insert_now(arg->name, arg);
     }
 
-    SymNode* global = symtab_lookup_root(arg->name);
-    if (global && global->type == TYPE_STRUCT) {
+    SymNode* global = symtab_lookup(struct_table, arg->name);
+    if (global) {
         symbol_error(3, rln, "parameter name duplicated with global struct: ",
                      arg->name);
     }
@@ -289,8 +287,8 @@ void state_CompSt(TreeNode* root, SymNode* ret, SymNode* args) {
         // Spray args
         for (int i = 0; i < args->data_struct.size; i++) {
             const char* name = args->data_struct.types[i]->name;
-            SymNode* pre = symtab_lookup_root(name);
-            if (pre && pre->type == TYPE_STRUCT) {
+            SymNode* pre = symtab_lookup(struct_table, name);
+            if (pre) {
                 symbol_error(
                     3, rln,
                     "parameter name duplicated with global struct: ", name);
@@ -391,7 +389,7 @@ void state_Dec(TreeNode* root, SymNode* type, SymNode** type_pos) {
             symbol_error(3, rln, "redefined variable: ", node->name);
         }
     } else {
-        SymNode* global = symtab_lookup_root(node->name);
+        SymNode* global = symtab_lookup(struct_table, node->name);
         if (!type_pos && global && global->type == TYPE_STRUCT) {
             // Variable conflict with global struct
             symbol_error(

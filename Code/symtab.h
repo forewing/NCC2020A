@@ -7,6 +7,7 @@
 
 extern HashMap* symtab;
 extern HashMap* symtab_root;
+extern HashMap* struct_table;
 
 void symtab_push();
 void symtab_pop();

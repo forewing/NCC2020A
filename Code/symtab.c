@@ -2,6 +2,7 @@
 
 HashMap* symtab;
 HashMap* symtab_root;
+HashMap* struct_table;
 
 void symtab_push() {
     HashMap* new_map = hashmap_new();
@@ -26,11 +27,11 @@ HashNode* symtab_place(HashMap* tab, const char* key) {
     return NULL;
 }
 
-HashNode* symtab_place_root( const char* key) {
+HashNode* symtab_place_root(const char* key) {
     return symtab_place(symtab_root, key);
 }
 
-HashNode* symtab_place_now( const char* key) {
+HashNode* symtab_place_now(const char* key) {
     return symtab_place(symtab, key);
 }
 

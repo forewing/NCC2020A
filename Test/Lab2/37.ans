@@ -1,10 +1,1 @@
-Error type 3 at Line 13: parameter name duplicated with global struct: x.
-Error type 3 at Line 13: parameter name duplicated with global struct: y.
-Error type 3 at Line 15: parameter name duplicated with global struct: x.
-Error type 3 at Line 15: parameter name duplicated with global struct: y.
-Error type 3 at Line 15: parameter name duplicated with global struct: x.
-Error type 3 at Line 15: parameter name duplicated with global struct: y.
-Error type 3 at Line 19: parameter name duplicated with global struct: x.
-Error type 3 at Line 19: parameter name duplicated with global struct: x.
-Error type 3 at Line 28: variable name conflict with global struct name: x.
 Error type 11 at Line 35: variable is not callable: i.
