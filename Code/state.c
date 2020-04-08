@@ -96,9 +96,9 @@ void state_ExtDef(TreeNode* root) {
         if (!typeEqual(func, pre)) {
             symbol_error(19, rln,
                          "inconsistent declaration of function: ", func->name);
-            return;
+        } else {
+            func = pre;
         }
-        func = pre;
     } else {
         symtab_insert_now(func->name, func);
     }
@@ -189,7 +189,7 @@ SymNode* state_StructSpecifier(TreeNode* root) {
     if (name) {
         SymNode* pre = symtab_lookup_root(name);
         if (pre) {
-            symbol_error(16, rln, "struct name duplicated:", name);
+            symbol_error(16, rln, "struct name duplicated: ", name);
         } else {
             SymNode* entity = type_dup_right(type);
 
@@ -225,6 +225,7 @@ SymNode* state_VarDec(TreeNode* root, SymNode* type) {
         SymNode* pre = state_VarDec(rch0, type);
         SymNode* ret = type_new_array(pre);
         ret->data_array.size = rch2->data_int;
+        ret->name = pre->name;
         if (pre->type == TYPE_ARRAY) {
             ret->data_array.dimen = pre->data_array.dimen + 1;
         } else {
@@ -399,9 +400,10 @@ void state_Dec(TreeNode* root, SymNode* type, SymNode** type_pos) {
                 3, rln,
                 "variable name conflict with global struct name: ", node->name);
         }
-        symtab_insert_now(node->name, type);
-        if (type_pos)
-            *type_pos = node;
+        symtab_insert_now(node->name, node);
+    }
+    if (type_pos) {
+        *type_pos = node;
     }
 
     // VarDec
@@ -446,12 +448,12 @@ SymNode* state_Exp(TreeNode* root) {
         }
         // ID LP Args RP
         // ID LP RP
-        if (id->type == TYPE_INVALID) {
-            return id;
-        }
         if (!id) {
             symbol_error(2, rln, "undefined function: ", rch0->data_str);
             return type_new_invalid();
+        }
+        if (id->type == TYPE_INVALID) {
+            return id;
         }
         if (id->type != TYPE_FUNC) {
             symbol_error(11, rln, "variable is not callable: ", id->name);
