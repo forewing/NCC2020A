@@ -30,7 +30,7 @@ SymNode* symtab_lookup_root(const char* key) {
     return symtab_lookup(symtab_root, key);
 }
 
-SymNode* symtab_lookup_last(const char* key) {
+SymNode* symtab_lookup_now(const char* key) {
     return symtab_lookup(symtab, key);
 }
 
@@ -53,6 +53,6 @@ int symtab_insert_root(const char* key, SymNode* data) {
     return symtab_insert(symtab_root, key, data);
 }
 
-int symtab_insert_last(const char* key, SymNode* data) {
+int symtab_insert_now(const char* key, SymNode* data) {
     return symtab_insert(symtab, key, data);
 }

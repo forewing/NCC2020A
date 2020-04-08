@@ -84,17 +84,57 @@ void state_ExtDef(TreeNode* root) {
     }
     if (rch1->state_type == STATE_ExtDecList) {
         // Specifier ExtDecList SEMI
-        // state_ExtDecList(rch1, spec);
+        state_ExtDecList(rch1, spec);
         return;
     }
-    if (rch2->state_type == STATE_SEMI) {
-        // Specifier FunDec SEMI
+
+    SymNode* func = state_FunDec(rch1, spec);
+    func->line = rch1->lineno;
+    SymNode* pre = symtab_lookup_now(func->name);
+    if (pre) {
+        func->is_right = pre->is_right;
+        if (!typeEqual(func, pre)) {
+            symbol_error(19, rln,
+                         "inconsistent declaration of function: ", func->name);
+            return;
+        }
+        func = pre;
     } else {
+        symtab_insert_now(func->name, func);
+    }
+    if (rch2->state_type == STATE_CompSt) {
         // Specifier FunDec CompSt
+        state_CompSt(rch2, func);
+        if (func->is_right) {
+            symbol_error(4, rln, "duplicated define of function: ", func->name);
+        }
+        func->is_right = 1;
     }
 }
 
-void state_ExtDecList(TreeNode* root, SymNode* type) {}
+void state_ExtDecList(TreeNode* root, SymNode* type) {
+    // VarDec
+
+    SymNode* node = state_VarDec(rch0, type_dup_left(type));
+
+    if (symtab_lookup_now(node->name)) {
+        // Conflict
+        symbol_error(3, rln, "redefined variable: ", node->name);
+    } else {
+        SymNode* global = symtab_lookup_root(node->name);
+        if (global && global->type == TYPE_STRUCT) {
+            // Conflict with global struct name
+            symbol_error(3, rln, "variable name conflict with struct name: ",
+                         node->name);
+        }
+        symtab_insert_now(node->name, node);
+    }
+
+    if (rsz == 3) {
+        // VarDec COMMA ExtDecList
+        state_ExtDecList(rch2, type);
+    }
+}
 
 SymNode* state_Specifier(TreeNode* root) {
     // All the return value should be dup before assign
@@ -172,10 +212,75 @@ const char* state_Tag(TreeNode* root) {
     return rch0->data_str;
 }
 
-SymNode* state_VarDec(TreeNode* root, SymNode* type) {}
-SymNode* state_FunDec(TreeNode* root, SymNode* type) {}
-void state_VarList(TreeNode* root, SymNode** type_pos) {}
-SymNode* state_ParamDec(TreeNode* root) {}
+SymNode* state_VarDec(TreeNode* root, SymNode* type) {
+    // type should be dup already
+    if (rsz == 1) {
+        // ID
+        type->name = rch0->data_str;
+        return type;
+    } else {
+        // VarDec LB INT RB
+        SymNode* pre = state_VarDec(rch0, type);
+        SymNode* ret = type_new_array(pre);
+        ret->data_array.size = rch2->data_int;
+        if (pre->type == TYPE_ARRAY) {
+            ret->data_array.dimen = pre->data_array.dimen + 1;
+        } else {
+            ret->data_array.dimen = 1;
+        }
+        return ret;
+    }
+}
+
+SymNode* state_FunDec(TreeNode* root, SymNode* type) {
+    SymNode* args;
+    if (root->size == 4) {
+        // ID LP VarList RP
+        int size = rch2->data_int;
+        args = type_new_struct(size);
+        symtab_push();
+        state_VarList(rch2, args->data_struct.types);
+        symtab_pop();
+    } else {
+        // ID LP RP
+        args = type_dup_left(&void_entity);
+    }
+
+    SymNode* ret = type_new_func(type, args);
+    ret->name = rch0->data_str;
+    return ret;
+}
+
+void state_VarList(TreeNode* root, SymNode** type_pos) {
+    // ParamDec
+    SymNode* arg = state_ParamDec(rch0);
+    if (symtab_lookup_now(arg->name)) {
+        symbol_error(3, rln, "parameter name redefined: ", arg->name);
+    } else {
+        symtab_insert_now(arg->name, arg);
+    }
+
+    SymNode* global = symtab_lookup_root(arg->name);
+    if (global && global->type == TYPE_STRUCT) {
+        symbol_error(3, rln, "parameter name duplicated with global struct: ",
+                     arg->name);
+    }
+
+    *type_pos = arg;
+
+    if (rsz == 3) {
+        // ParamDec COMMA VarList
+        state_VarList(rch2, type_pos + 1);
+    }
+}
+
+SymNode* state_ParamDec(TreeNode* root) {
+    // Specifier VarDec
+    SymNode* type = type_dup_left(state_Specifier(rch0));
+    state_VarDec(rch1, type);
+    return type;
+}
+
 void state_CompSt(TreeNode* root, SymNode* func) {}
 void state_StmtList(TreeNode* root, SymNode* func) {}
 void state_Stmt(TreeNode* root, SymNode* func) {}
@@ -231,7 +336,7 @@ void state_Dec(TreeNode* root, SymNode* type, SymNode** type_pos) {
         }
     }
     // Insert
-    if (symtab_lookup_last(node->name)) {
+    if (symtab_lookup_now(node->name)) {
         // Conflict in current
         if (type_pos) {
             // In struct
@@ -248,7 +353,7 @@ void state_Dec(TreeNode* root, SymNode* type, SymNode** type_pos) {
                 3, rln,
                 "variable name conflict with global struct name: ", node->name);
         }
-        symtab_insert_last(node->name, type);
+        symtab_insert_now(node->name, type);
         if (type_pos)
             *type_pos = node;
     }
