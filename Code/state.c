@@ -32,9 +32,9 @@ SymNode* state_VarDec(TreeNode* root, SymNode* type);
 SymNode* state_FunDec(TreeNode* root, SymNode* type);
 void state_VarList(TreeNode* root, SymNode** type_pos);
 SymNode* state_ParamDec(TreeNode* root);
-void state_CompSt(TreeNode* root, SymNode* func);
-void state_StmtList(TreeNode* root, SymNode* func);
-void state_Stmt(TreeNode* root, SymNode* func);
+void state_CompSt(TreeNode* root, SymNode* ret, SymNode* args);
+void state_StmtList(TreeNode* root, SymNode* ret);
+void state_Stmt(TreeNode* root, SymNode* ret);
 void state_DefList(TreeNode* root, SymNode** type_pos);
 void state_Def(TreeNode* root, SymNode** type_pos);
 void state_DecList(TreeNode* root, SymNode* type, SymNode** type_pos);
@@ -104,7 +104,7 @@ void state_ExtDef(TreeNode* root) {
     }
     if (rch2->state_type == STATE_CompSt) {
         // Specifier FunDec CompSt
-        state_CompSt(rch2, func);
+        state_CompSt(rch2, func->data_func.ret, func->data_func.args);
         if (func->is_right) {
             symbol_error(4, rln, "duplicated define of function: ", func->name);
         }
@@ -281,9 +281,67 @@ SymNode* state_ParamDec(TreeNode* root) {
     return type;
 }
 
-void state_CompSt(TreeNode* root, SymNode* func) {}
-void state_StmtList(TreeNode* root, SymNode* func) {}
-void state_Stmt(TreeNode* root, SymNode* func) {}
+void state_CompSt(TreeNode* root, SymNode* ret, SymNode* args) {
+    symtab_push();
+
+    if (args) {
+        // Spray args
+        for (int i = 0; i < args->data_struct.size; i++) {
+            const char* name = args->data_struct.types[i]->name;
+            SymNode* pre = symtab_lookup_root(name);
+            if (pre && pre->type == TYPE_STRUCT) {
+                symbol_error(
+                    3, rln,
+                    "parameter name duplicated with global struct: ", name);
+            }
+            symtab_insert_now(name, args->data_struct.types[i]);
+        }
+    }
+
+    // LC DefList StmtList RC
+    state_DefList(rch1, NULL);
+    state_StmtList(rch2, ret);
+
+    symtab_pop();
+}
+
+void state_StmtList(TreeNode* root, SymNode* ret) {
+    if (rsz == 2) {
+        // Stmt StmtList
+        state_Stmt(rch0, ret);
+        state_StmtList(rch1, ret);
+    }
+    // else Empty
+}
+
+void state_Stmt(TreeNode* root, SymNode* ret) {
+    if (rsz == 1) {
+        // CompSt
+        state_CompSt(rch0, ret, NULL);
+    } else if (rsz == 2) {
+        // Exp SEMI
+        state_Exp(rch0);
+    } else if (rsz == 3) {
+        // RETURN Exp SEMI
+        SymNode* exp = state_Exp(rch1);
+        if (!typeEqual(exp, ret)) {
+            symbol_error(8, rln, "return type mismatch", "");
+        }
+    } else {
+        // IF    LP Exp RP Stmt
+        // IF    LP Exp RP Stmt ELSE Stmt
+        // WHILE LP Exp RP Stmt
+        SymNode* exp = state_Exp(rch2);
+        if (!typeEqual(exp, &int_entity)) {
+            symbol_error(7, root->lineno, "condition must be int", "");
+        }
+        state_Stmt(rch4, ret);
+        if (root->size == 7) {
+            // IF    LP Exp RP Stmt ELSE Stmt
+            state_Stmt(rch6, ret);
+        }
+    }
+}
 
 void state_DefList(TreeNode* root, SymNode** type_pos) {
     if (rsz == 0) {
@@ -319,22 +377,8 @@ void state_DecList(TreeNode* root, SymNode* type, SymNode** type_pos) {
 
 void state_Dec(TreeNode* root, SymNode* type, SymNode** type_pos) {
     // type already duped
-    // VarDec
     SymNode* node = state_VarDec(rch0, type);
-    if (root->size == 3) {
-        // VarDec ASSIGNOP Exp
-        if (type_pos) {
-            // In struct
-            symbol_error(15, rln, "init struct member: ", node->name);
-        } else if (node->type == TYPE_ARRAY) {
-            // Is array
-            symbol_error(5, rln, "init array: ", node->name);
-        } else {
-            SymNode* exp = state_Exp(rch2);
-            if (!typeEqual(node, exp))
-                symbol_error(5, rln, "conflict init type: ", node->name);
-        }
-    }
+
     // Insert
     if (symtab_lookup_now(node->name)) {
         // Conflict in current
@@ -356,6 +400,22 @@ void state_Dec(TreeNode* root, SymNode* type, SymNode** type_pos) {
         symtab_insert_now(node->name, type);
         if (type_pos)
             *type_pos = node;
+    }
+
+    // VarDec
+    if (root->size == 3) {
+        // VarDec ASSIGNOP Exp
+        if (type_pos) {
+            // In struct
+            symbol_error(15, rln, "init struct member: ", node->name);
+        } else if (node->type == TYPE_ARRAY) {
+            // Is array
+            symbol_error(5, rln, "init array: ", node->name);
+        } else {
+            SymNode* exp = state_Exp(rch2);
+            if (!typeEqual(node, exp))
+                symbol_error(5, rln, "conflict init type: ", node->name);
+        }
     }
 }
 
