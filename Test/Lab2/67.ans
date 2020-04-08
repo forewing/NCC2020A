@@ -1,0 +1,4 @@
+Error type 19 at Line 8: inconsistent declaration of function addMeat.
+Error type 19 at Line 10: inconsistent declaration of function addMeat.
+Error type 19 at Line 17: inconsistent declaration of function addSaurce.
+Error type 18 at Line 22: undefined function: addBread.
