@@ -1,0 +1,4 @@
+[submodule "compilers-tests"]
+	path = compilers-tests
+	url = git@git.jbesu.com:Mirrors/compilers-tests.git
+	branch = master
