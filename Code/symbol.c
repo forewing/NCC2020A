@@ -113,6 +113,8 @@ int type_free(SymNode* node) {
 }
 
 SymNode* type_dup(const SymNode* type, int right) {
+    if (!type)
+        return type_new_invalid();
     SymNode* ret = (SymNode*)malloc(sizeof(SymNode));
     memcpy(ret, type, sizeof(SymNode));
 
