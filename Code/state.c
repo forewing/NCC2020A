@@ -1,10 +1,12 @@
 #include "state.h"
 
+#include "helper.h"
 #include "symbol.h"
 #include "symtab.h"
 #include "tree.h"
 
 void symbol_error(int type, int lineno, const char* msg, const char* name) {
+    bug_number++;
     fprintf(stderr, "Error type %d at Line %d: %s%s.\n", type, lineno, msg,
             name);
 }
