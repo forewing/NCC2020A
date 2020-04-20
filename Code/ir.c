@@ -29,7 +29,8 @@ IrCode* IrCode_new() {
 void IrCode_insert(IrCode* pos, IrCode* elem) {
     elem->next = pos;
     elem->prev = pos->prev;
-    pos->prev->next = elem;
+    if (pos->prev)
+        pos->prev->next = elem;
     pos->prev = elem;
 }
 
@@ -37,4 +38,3 @@ void IrCode_delete(IrCode* pos) {
     pos->prev->next = pos->next;
     pos->next->prev = pos->prev;
 }
-

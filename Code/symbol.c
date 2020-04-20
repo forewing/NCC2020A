@@ -42,6 +42,7 @@ SymNode* type_new() {
     SymNode* ret = (SymNode*)malloc(sizeof(SymNode));
     ret->name = NULL;
     ret->offset = 0;
+    ret->size = 0;
     ret->type = TYPE_INVALID;
     ret->is_right = 0;
     ret->line = 0;
@@ -57,6 +58,7 @@ SymNode* type_new_invalid() {
 SymNode* type_new_int(int value) {
     SymNode* ret = type_new();
     ret->type = TYPE_INT;
+    ret->size = 4;
     ret->data_int = value;
     return ret;
 }
@@ -64,6 +66,7 @@ SymNode* type_new_int(int value) {
 SymNode* type_new_float(float value) {
     SymNode* ret = type_new();
     ret->type = TYPE_FLOAT;
+    ret->size = 4;
     ret->data_float = value;
     return ret;
 }

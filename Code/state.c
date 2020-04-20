@@ -1,6 +1,7 @@
 #include "state.h"
 
 #include "helper.h"
+#include "ir.h"
 #include "symbol.h"
 #include "symtab.h"
 #include "tree.h"
@@ -21,6 +22,12 @@ void symbol_error(int type, int lineno, const char* msg, const char* name) {
 #define rch6 CHILD(6)
 #define rsz root->size
 #define rln root->lineno
+
+void struct_size_calc(SymNode* elem) {
+    for (int i = 0; i < elem->data_struct.size; i++) {
+        elem->size += elem->data_struct.types[i]->size;
+    }
+}
 
 void state_Program(TreeNode* root);
 void state_ExtDefList(TreeNode* root);
@@ -50,6 +57,9 @@ void symtab_build() {
     struct_table = hashmap_new();
     symtab = hashmap_new();
     symtab_root = symtab;
+
+    ircode_list = IrCode_new();
+
     state_Program(tree_root);
 }
 
@@ -86,6 +96,10 @@ void state_ExtDef(TreeNode* root) {
         return;
     }
     if (rch1->state_type == STATE_ExtDecList) {
+        // Global variable not allowed
+        bug_number++;
+        return;
+
         // Specifier ExtDecList SEMI
         state_ExtDecList(rch1, spec);
         return;
@@ -182,6 +196,8 @@ SymNode* state_StructSpecifier(TreeNode* root) {
     state_DefList(rch3, type->data_struct.types);
     symtab_pop();
 
+    struct_size_calc(type);
+
     const char* name = state_OptTag(rch1);
     if (name) {
         SymNode* pre = symtab_lookup(struct_table, name);
@@ -224,6 +240,7 @@ SymNode* state_VarDec(TreeNode* root, SymNode* type) {
         SymNode* pre = state_VarDec(rch0, type);
         SymNode* ret = type_new_array(pre);
         ret->data_array.size = rch2->data_int;
+        ret->size = rch2->data_int * pre->size;
         ret->name = pre->name;
         if (pre->type == TYPE_ARRAY) {
             ret->data_array.dimen = pre->data_array.dimen + 1;
@@ -243,6 +260,9 @@ SymNode* state_FunDec(TreeNode* root, SymNode* type) {
         symtab_push();
         state_VarList(rch2, args->data_struct.types);
         symtab_pop();
+
+        struct_size_calc(args);
+
     } else {
         // ID LP RP
         args = type_dup_left(&void_entity);
