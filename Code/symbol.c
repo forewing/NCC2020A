@@ -1,13 +1,13 @@
 #include "symbol.h"
 
 const SymNode int_entity =
-    {.data_int = 0, "CONST_INT_ENTITY", 0, TYPE_INT, 1, 0};
+    {.data_int = 0, "CONST_INT_ENTITY", 0, 4, TYPE_INT, 1, 0};
 const SymNode float_entity =
-    {.data_float = 0.0, "CONST_FLOAT_ENTITY", 0, TYPE_FLOAT, 1, 0};
+    {.data_float = 0.0, "CONST_FLOAT_ENTITY", 0, 4, TYPE_FLOAT, 1, 0};
 const SymNode void_entity =
-    {.data_struct = {NULL, 0}, "CONST_VOID_ENTITY", 0, TYPE_STRUCT, 1, 0};
+    {.data_struct = {NULL, 0}, "CONST_VOID_ENTITY", 0, 0, TYPE_STRUCT, 1, 0};
 const SymNode invalid_entity =
-    {.data_int = 0, "CONST_INVALID_ENTITY", 0, TYPE_INVALID, 0, 0};
+    {.data_int = 0, "CONST_INVALID_ENTITY", 0, 4, TYPE_INVALID, 0, 0};
 
 int typeEqual(const SymNode* a, const SymNode* b) {
     if (!a || !b)

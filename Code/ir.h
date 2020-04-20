@@ -1,6 +1,7 @@
 #ifndef IR_H
 #define IR_H
 
+#include <stdarg.h>
 #include <stdlib.h>
 
 #include "helper.h"
@@ -26,6 +27,10 @@ typedef struct IrCode {
     struct IrCode* prev;
     struct IrCode* next;
 
+    IrOprand* x;
+    IrOprand* y;
+    IrOprand* z;
+
     enum {
         CODE_NOP,
         CODE_LABEL,
@@ -49,18 +54,22 @@ typedef struct IrCode {
         CODE_WRITE
     } type;
 
-    IrOprand* x;
-    IrOprand* y;
-    IrOprand* z;
+    int data_int;
+
 } IrCode;
 
-IrOprand* IrOprand_new();
-IrCode* IrCode_new();
+IrOprand* IrOprand_new(int type);
+IrOprand* IrOprand_new_int(int type, int data);
+IrOprand* IrOprand_new_str(int type, const char* data);
+
+IrCode* IrCode_new(int type, int data, IrOprand* x, IrOprand* y, IrOprand* z);
+
 void IrCode_insert(IrCode* pos, IrCode* elem);
 void IrCode_delete(IrCode* pos);
 
 extern IrCode* ircode_list;
 extern int tmpvar_num;
 extern int label_num;
+extern int compst_num;
 
 #endif

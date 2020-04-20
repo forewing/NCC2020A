@@ -49,7 +49,7 @@ void state_Def(TreeNode* root, SymNode** type_pos);
 void state_DecList(TreeNode* root, SymNode* type, SymNode** type_pos);
 void state_Dec(TreeNode* root, SymNode* type, SymNode** type_pos);
 SymNode* state_Exp(TreeNode* root);
-void state_Args(TreeNode* root, SymNode** type_pos);
+void state_Args(TreeNode* root, SymNode** type_pos, int* tmp_pos);
 
 void symtab_build() {
     if (bug_number != 0)
@@ -58,12 +58,27 @@ void symtab_build() {
     symtab = hashmap_new();
     symtab_root = symtab;
 
-    ircode_list = IrCode_new();
+    ircode_list = IrCode_new(CODE_NOP, 0, NULL, NULL, NULL);
 
     state_Program(tree_root);
 }
 
 void state_Program(TreeNode* root) {
+    SymNode* func_write =
+        type_new_func(type_dup_right(&int_entity), type_new_struct(1));
+    func_write->name = "write";
+    func_write->is_right = 1;
+    func_write->data_func.args->size = 4;
+    func_write->data_func.args->data_struct.types[0] =
+        type_dup_right(&int_entity);
+    symtab_insert_root("write", func_write);
+
+    SymNode* func_read = type_new_func(type_dup_right(&int_entity),
+                                       type_dup_right(&void_entity));
+    func_read->name = "read";
+    func_read->is_right = 1;
+    symtab_insert_root("read", func_read);
+
     state_ExtDefList(rch0);
 
     for (int i = 0; i < HASH_SIZE; i++) {
@@ -101,8 +116,8 @@ void state_ExtDef(TreeNode* root) {
         return;
 
         // Specifier ExtDecList SEMI
-        state_ExtDecList(rch1, spec);
-        return;
+        // state_ExtDecList(rch1, spec);
+        // return;
     }
 
     SymNode* func = state_FunDec(rch1, spec);
@@ -120,6 +135,12 @@ void state_ExtDef(TreeNode* root) {
     }
     if (rch2->state_type == STATE_CompSt) {
         // Specifier FunDec CompSt
+
+        IrCode_insert(
+            ircode_list,
+            IrCode_new(CODE_FUNC, 0, IrOprand_new_str(OP_FUNC, func->name),
+                       NULL, NULL));
+
         state_CompSt(rch2, func->data_func.ret, func->data_func.args);
         if (func->is_right) {
             symbol_error(4, rln, "duplicated define of function: ", func->name);
@@ -309,6 +330,12 @@ void state_CompSt(TreeNode* root, SymNode* ret, SymNode* args) {
         // Spray args
         for (int i = 0; i < args->data_struct.size; i++) {
             const char* name = args->data_struct.types[i]->name;
+
+            IrCode_insert(
+                ircode_list,
+                IrCode_new(CODE_PARAM, 0, IrOprand_new_str(OP_VAR, name), NULL,
+                           NULL));
+
             SymNode* pre = symtab_lookup(struct_table, name);
             if (pre) {
                 symbol_error(
@@ -400,6 +427,8 @@ void state_Dec(TreeNode* root, SymNode* type, SymNode** type_pos) {
     // type already duped
     SymNode* node = state_VarDec(rch0, type);
 
+    // printf("%s: %d\n", node->name, node->size);
+
     // Insert
     if (symtab_lookup_now(node->name)) {
         // Conflict in current
@@ -418,10 +447,18 @@ void state_Dec(TreeNode* root, SymNode* type, SymNode** type_pos) {
                 3, rln,
                 "variable name conflict with global struct name: ", node->name);
         }
+
         symtab_insert_now(node->name, node);
     }
     if (type_pos) {
+        // Struct
         *type_pos = node;
+    } else {
+        // Normal Dec
+        IrCode_insert(
+            ircode_list,
+            IrCode_new(CODE_DEC, node->size,
+                       IrOprand_new_str(OP_VAR, node->name), NULL, NULL));
     }
 
     // VarDec
@@ -435,6 +472,12 @@ void state_Dec(TreeNode* root, SymNode* type, SymNode** type_pos) {
             symbol_error(5, rln, "init array: ", node->name);
         } else {
             SymNode* exp = state_Exp(rch2);
+
+            IrCode_insert(
+                ircode_list,
+                IrCode_new(CODE_ASSIGN, 0, IrOprand_new_str(OP_VAR, node->name),
+                           IrOprand_new_int(OP_TEMP, tmpvar_num - 1), NULL));
+
             if (!typeEqual(node, exp))
                 symbol_error(5, rln, "conflict init type: ", node->name);
         }
@@ -446,8 +489,17 @@ SymNode* state_Exp(TreeNode* root) {
         // INT
         SymNode* type = type_new_int(rch0->data_int);
         type->is_right = 1;
+
+        IrCode_insert(
+            ircode_list,
+            IrCode_new(CODE_ASSIGN, 0, IrOprand_new_int(OP_TEMP, tmpvar_num++),
+                       IrOprand_new_int(OP_CONST, rch0->data_int), NULL));
+
         return type;
     } else if (rch0->state_type == STATE_FLOAT) {
+        // NO FLOAT CONST ALLOWED
+        bug_number++;
+
         // FLOAT
         SymNode* type = type_new_float(rch0->data_float);
         type->is_right = 1;
@@ -462,10 +514,18 @@ SymNode* state_Exp(TreeNode* root) {
                 symbol_error(1, rln, "undefined variable: ", rch0->data_str);
                 return type_new_invalid();
             }
+
+            IrCode_insert(
+                ircode_list,
+                IrCode_new(CODE_ASSIGN, 0,
+                           IrOprand_new_int(OP_TEMP, tmpvar_num++),
+                           IrOprand_new_str(OP_VAR, rch0->data_str), NULL));
+
             return id;
         }
         // ID LP Args RP
         // ID LP RP
+
         if (!id) {
             symbol_error(2, rln, "undefined function: ", rch0->data_str);
             return type_new_invalid();
@@ -482,14 +542,42 @@ SymNode* state_Exp(TreeNode* root) {
             if (!typeEqual(&void_entity, id->data_func.args)) {
                 symbol_error(9, rln, "arguments mismatch: ", id->name);
             }
+
+            IrCode_insert(
+                ircode_list,
+                IrCode_new(CODE_CALL, 0,
+                           IrOprand_new_int(OP_TEMP, tmpvar_num++),
+                           IrOprand_new_str(OP_FUNC, rch0->data_str), NULL));
+
             return type_dup_right(id->data_func.ret);
         } else {
             // ID LP Args RP
+
             if (rch2->data_int == id->data_func.args->data_struct.size) {
                 SymNode* args = type_new_struct(rch2->data_int);
-                state_Args(rch2, args->data_struct.types);
+
+                int* tmp_pos = (int*)malloc(sizeof(int) * rch2->data_int);
+                state_Args(rch2, args->data_struct.types, tmp_pos);
+
+                for (int i = args->data_struct.size - 1; i >= 0; i--) {
+                    IrCode_insert(
+                        ircode_list,
+                        IrCode_new(CODE_PARAM, 0,
+                                   IrOprand_new_int(OP_TEMP, tmp_pos[i]), NULL,
+                                   NULL));
+                }
+
+                free(tmp_pos);
+
+                IrCode_insert(
+                    ircode_list,
+                    IrCode_new(
+                        CODE_CALL, 0, IrOprand_new_int(OP_TEMP, tmpvar_num++),
+                        IrOprand_new_str(OP_FUNC, rch0->data_str), NULL));
+
                 if (typeEqual(args, id->data_func.args)) {
                     // Only success here
+
                     return type_dup_right(id->data_func.ret);
                 }
             }
@@ -501,8 +589,11 @@ SymNode* state_Exp(TreeNode* root) {
 
     if (rch0->state_type == STATE_LP) {
         // LP Exp RP
+        // No code, just pass
         return state_Exp(rch1);
     }
+
+    // TODO
 
     // if (rsz == )
     SymNode* exp1 = NULL;
@@ -633,11 +724,12 @@ SymNode* state_Exp(TreeNode* root) {
     return type_new_invalid();
 }
 
-void state_Args(TreeNode* root, SymNode** type_pos) {
+void state_Args(TreeNode* root, SymNode** type_pos, int* tmp_pos) {
     // Exp
     *type_pos = state_Exp(rch0);
+    *tmp_pos = tmpvar_num - 1;
     if (rsz == 3) {
         // Exp COMMA Args
-        state_Args(rch2, type_pos + 1);
+        state_Args(rch2, type_pos + 1, tmp_pos + 1);
     }
 }

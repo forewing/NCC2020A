@@ -37,7 +37,7 @@ test:
 ifdef target
 	./parser ../Test/$(target).cmm
 else
-	./parser ../Test/test1.cmm
+	./parser ../Test/tmp/test.cmm
 endif
 
 diff:
