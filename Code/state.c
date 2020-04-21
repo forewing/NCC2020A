@@ -6,11 +6,11 @@
 #include "symtab.h"
 #include "tree.h"
 
-void symbol_error(int type, int lineno, const char* msg, const char* name) {
-    bug_number++;
-    fprintf(stderr, "Error type %d at Line %d: %s%s.\n", type, lineno, msg,
-            name);
-}
+// void symbol_error(int type, int lineno, const char* msg, const char* name) {
+//     bug_number++;
+//     fprintf(stderr, "Error type %d at Line %d: %s%s.\n", type, lineno, msg,
+//             name);
+// }
 
 #define CHILD(__ID__) root->children[__ID__]
 #define rch0 CHILD(0)
@@ -80,18 +80,6 @@ void state_Program(TreeNode* root) {
     symtab_insert_root("read", func_read);
 
     state_ExtDefList(rch0);
-
-    for (int i = 0; i < HASH_SIZE; i++) {
-        HashNode* ptr = symtab->nodes[i];
-        while (ptr) {
-            SymNode* func = ptr->data;
-            if (func->type == TYPE_FUNC && !func->is_right) {
-                symbol_error(18, func->line,
-                             "undefined function: ", func->name);
-            }
-            ptr = ptr->next;
-        }
-    }
 }
 
 void state_ExtDefList(TreeNode* root) {
@@ -122,17 +110,8 @@ void state_ExtDef(TreeNode* root) {
 
     SymNode* func = state_FunDec(rch1, spec);
     func->line = rch1->lineno;
-    HashNode* pre = symtab_place_now(func->name);
-    if (pre) {
-        func->is_right = pre->data->is_right;
-        if (!typeEqual(func, pre->data)) {
-            symbol_error(19, rln,
-                         "inconsistent declaration of function: ", func->name);
-        }
-        pre->data = func;
-    } else {
-        symtab_insert_now(func->name, func);
-    }
+    symtab_insert_now(func->name, func);
+
     if (rch2->state_type == STATE_CompSt) {
         // Specifier FunDec CompSt
 
@@ -142,10 +121,6 @@ void state_ExtDef(TreeNode* root) {
                        NULL, NULL));
 
         state_CompSt(rch2, func->data_func.ret, func->data_func.args);
-        if (func->is_right) {
-            symbol_error(4, rln, "duplicated define of function: ", func->name);
-        }
-        func->is_right = 1;
     }
 }
 
@@ -153,19 +128,7 @@ void state_ExtDecList(TreeNode* root, SymNode* type) {
     // VarDec
 
     SymNode* node = state_VarDec(rch0, type_dup_left(type));
-
-    if (symtab_lookup_now(node->name)) {
-        // Conflict
-        symbol_error(3, rln, "redefined variable: ", node->name);
-    } else {
-        SymNode* global = symtab_lookup(struct_table, node->name);
-        if (global) {
-            // Conflict with global struct name
-            symbol_error(3, rln, "variable name conflict with struct name: ",
-                         node->name);
-        }
-        symtab_insert_now(node->name, node);
-    }
+    symtab_insert_now(node->name, node);
 
     if (rsz == 3) {
         // VarDec COMMA ExtDecList
@@ -183,6 +146,7 @@ SymNode* state_Specifier(TreeNode* root) {
                 return type_new_int(0);
                 break;
             case TYPENAME_FLOAT:
+                bug_number++;
                 return type_new_float(0.0);
                 break;
             default:
@@ -199,10 +163,6 @@ SymNode* state_StructSpecifier(TreeNode* root) {
         // STRUCT Tag
         const char* name = state_Tag(rch1);
         SymNode* type = symtab_lookup(struct_table, name);
-        if (!type) {
-            symbol_error(17, rln, "struct not defined: ", name);
-            return type_new_invalid();
-        }
         return type;
     }
     // STRUCT OptTag LC DefList RC
@@ -221,16 +181,8 @@ SymNode* state_StructSpecifier(TreeNode* root) {
 
     const char* name = state_OptTag(rch1);
     if (name) {
-        SymNode* pre = symtab_lookup(struct_table, name);
-        if (pre) {
-            symbol_error(16, rln, "struct name duplicated: ", name);
-        } else {
-            SymNode* entity = type_dup_right(type);
-            symtab_insert(struct_table, name, entity);
-        }
-        if (symtab_lookup_root(name)) {
-            symbol_error(16, rln, "struct name duplicated: ", name);
-        }
+        SymNode* entity = type_dup_right(type);
+        symtab_insert(struct_table, name, entity);
     }
 
     return type;
@@ -297,17 +249,7 @@ SymNode* state_FunDec(TreeNode* root, SymNode* type) {
 void state_VarList(TreeNode* root, SymNode** type_pos) {
     // ParamDec
     SymNode* arg = state_ParamDec(rch0);
-    if (symtab_lookup_now(arg->name)) {
-        symbol_error(3, rln, "parameter name redefined: ", arg->name);
-    } else {
-        symtab_insert_now(arg->name, arg);
-    }
-
-    SymNode* global = symtab_lookup(struct_table, arg->name);
-    if (global) {
-        symbol_error(3, rln, "parameter name duplicated with global struct: ",
-                     arg->name);
-    }
+    symtab_insert_now(arg->name, arg);
 
     *type_pos = arg;
 
@@ -336,12 +278,6 @@ void state_CompSt(TreeNode* root, SymNode* ret, SymNode* args) {
                 IrCode_new(CODE_PARAM, 0, IrOprand_new_str(OP_VAR, name), NULL,
                            NULL));
 
-            SymNode* pre = symtab_lookup(struct_table, name);
-            if (pre) {
-                symbol_error(
-                    3, rln,
-                    "parameter name duplicated with global struct: ", name);
-            }
             symtab_insert_now(name, args->data_struct.types[i]);
         }
     }
@@ -372,17 +308,12 @@ void state_Stmt(TreeNode* root, SymNode* ret) {
     } else if (rsz == 3) {
         // RETURN Exp SEMI
         SymNode* exp = state_Exp(rch1);
-        if (!typeEqual(exp, ret)) {
-            symbol_error(8, rln, "return type mismatch", "");
-        }
+
     } else {
         // IF    LP Exp RP Stmt
         // IF    LP Exp RP Stmt ELSE Stmt
         // WHILE LP Exp RP Stmt
         SymNode* exp = state_Exp(rch2);
-        if (!typeEqual(exp, &int_entity)) {
-            symbol_error(7, root->lineno, "condition must be int", "");
-        }
         state_Stmt(rch4, ret);
         if (root->size == 7) {
             // IF    LP Exp RP Stmt ELSE Stmt
@@ -430,26 +361,9 @@ void state_Dec(TreeNode* root, SymNode* type, SymNode** type_pos) {
     // printf("%s: %d\n", node->name, node->size);
 
     // Insert
-    if (symtab_lookup_now(node->name)) {
-        // Conflict in current
-        if (type_pos) {
-            // In struct
-            symbol_error(15, rln, "duplicated struct member: ", node->name);
-        } else {
-            // Variable
-            symbol_error(3, rln, "redefined variable: ", node->name);
-        }
-    } else {
-        SymNode* global = symtab_lookup(struct_table, node->name);
-        if (!type_pos && global && global->type == TYPE_STRUCT) {
-            // Variable conflict with global struct
-            symbol_error(
-                3, rln,
-                "variable name conflict with global struct name: ", node->name);
-        }
 
-        symtab_insert_now(node->name, node);
-    }
+    symtab_insert_now(node->name, node);
+
     if (type_pos) {
         // Struct
         *type_pos = node;
@@ -464,23 +378,13 @@ void state_Dec(TreeNode* root, SymNode* type, SymNode** type_pos) {
     // VarDec
     if (root->size == 3) {
         // VarDec ASSIGNOP Exp
-        if (type_pos) {
-            // In struct
-            symbol_error(15, rln, "init struct member: ", node->name);
-        } else if (node->type == TYPE_ARRAY) {
-            // Is array
-            symbol_error(5, rln, "init array: ", node->name);
-        } else {
-            SymNode* exp = state_Exp(rch2);
 
-            IrCode_insert(
-                ircode_list,
-                IrCode_new(CODE_ASSIGN, 0, IrOprand_new_str(OP_VAR, node->name),
-                           IrOprand_new_int(OP_TEMP, tmpvar_num - 1), NULL));
+        SymNode* exp = state_Exp(rch2);
 
-            if (!typeEqual(node, exp))
-                symbol_error(5, rln, "conflict init type: ", node->name);
-        }
+        IrCode_insert(
+            ircode_list,
+            IrCode_new(CODE_ASSIGN, 0, IrOprand_new_str(OP_VAR, node->name),
+                       IrOprand_new_int(OP_TEMP, tmpvar_num - 1), NULL));
     }
 }
 
@@ -510,11 +414,6 @@ SymNode* state_Exp(TreeNode* root) {
         SymNode* id = symtab_lookup_all(rch0->data_str);
         if (rsz == 1) {
             // ID
-            if (!id) {
-                symbol_error(1, rln, "undefined variable: ", rch0->data_str);
-                return type_new_invalid();
-            }
-
             IrCode_insert(
                 ircode_list,
                 IrCode_new(CODE_ASSIGN, 0,
@@ -526,22 +425,8 @@ SymNode* state_Exp(TreeNode* root) {
         // ID LP Args RP
         // ID LP RP
 
-        if (!id) {
-            symbol_error(2, rln, "undefined function: ", rch0->data_str);
-            return type_new_invalid();
-        }
-        if (id->type == TYPE_INVALID) {
-            return id;
-        }
-        if (id->type != TYPE_FUNC) {
-            symbol_error(11, rln, "variable is not callable: ", id->name);
-            return type_new_invalid();
-        }
         if (rsz == 3) {
             // ID LP RP
-            if (!typeEqual(&void_entity, id->data_func.args)) {
-                symbol_error(9, rln, "arguments mismatch: ", id->name);
-            }
 
             IrCode_insert(
                 ircode_list,
@@ -553,37 +438,27 @@ SymNode* state_Exp(TreeNode* root) {
         } else {
             // ID LP Args RP
 
-            if (rch2->data_int == id->data_func.args->data_struct.size) {
-                SymNode* args = type_new_struct(rch2->data_int);
+            SymNode* args = type_new_struct(rch2->data_int);
 
-                int* tmp_pos = (int*)malloc(sizeof(int) * rch2->data_int);
-                state_Args(rch2, args->data_struct.types, tmp_pos);
+            int* tmp_pos = (int*)malloc(sizeof(int) * rch2->data_int);
+            state_Args(rch2, args->data_struct.types, tmp_pos);
 
-                for (int i = args->data_struct.size - 1; i >= 0; i--) {
-                    IrCode_insert(
-                        ircode_list,
-                        IrCode_new(CODE_PARAM, 0,
-                                   IrOprand_new_int(OP_TEMP, tmp_pos[i]), NULL,
-                                   NULL));
-                }
-
-                free(tmp_pos);
-
-                IrCode_insert(
-                    ircode_list,
-                    IrCode_new(
-                        CODE_CALL, 0, IrOprand_new_int(OP_TEMP, tmpvar_num++),
-                        IrOprand_new_str(OP_FUNC, rch0->data_str), NULL));
-
-                if (typeEqual(args, id->data_func.args)) {
-                    // Only success here
-
-                    return type_dup_right(id->data_func.ret);
-                }
+            for (int i = args->data_struct.size - 1; i >= 0; i--) {
+                IrCode_insert(ircode_list,
+                              IrCode_new(CODE_PARAM, 0,
+                                         IrOprand_new_int(OP_TEMP, tmp_pos[i]),
+                                         NULL, NULL));
             }
-            // Fail here
-            symbol_error(9, rln, "arguments mismatch: ", id->name);
-            return type_new_invalid();
+
+            free(tmp_pos);
+
+            IrCode_insert(
+                ircode_list,
+                IrCode_new(CODE_CALL, 0,
+                           IrOprand_new_int(OP_TEMP, tmpvar_num++),
+                           IrOprand_new_str(OP_FUNC, rch0->data_str), NULL));
+
+            return type_dup_right(id->data_func.ret);
         }
     }
 
@@ -593,7 +468,8 @@ SymNode* state_Exp(TreeNode* root) {
         return state_Exp(rch1);
     }
 
-    // TODO
+    int tmp_1 = -1;
+    int tmp_2 = -1;
 
     // if (rsz == )
     SymNode* exp1 = NULL;
@@ -606,46 +482,35 @@ SymNode* state_Exp(TreeNode* root) {
         exp1 = state_Exp(rch1);
     }
 
+    tmp_1 = tmpvar_num - 1;
+
     SymNode* exp2 = NULL;
     if (rsz >= 3 && rch2->state_type == STATE_Exp) {
         exp2 = state_Exp(rch2);
-    }
-
-    if (exp1->type == TYPE_INVALID) {
-        return type_new_invalid();
-    }
-    if (exp2 && exp2->type == TYPE_INVALID) {
-        return type_new_invalid();
+        tmp_2 = tmpvar_num - 1;
     }
 
     if (rsz == 2) {
         if (rch0->state_type == STATE_MINUS) {
             // MINUS Exp
-            if (!typeEqual(exp1, &int_entity) &&
-                !typeEqual(exp1, &float_entity)) {
-                symbol_error(7, rln,
-                             "can't do arithmetic operation on types except "
-                             "int and float",
-                             "");
-                return type_new_invalid();
-            }
+
+            IrCode_insert(
+                ircode_list,
+                IrCode_new(CODE_SUB, 0, IrOprand_new_int(OP_TEMP, tmpvar_num++),
+                           IrOprand_new_int(OP_CONST, 0),
+                           IrOprand_new_int(OP_TEMP, tmp_1)));
+
         } else {
             // NOT Exp
-            if (!typeEqual(exp1, &int_entity)) {
-                symbol_error(
-                    7, rln, "can't do logic operation on types except int", "");
-                return type_new_invalid();
-            }
+
+            // TODO
         }
         return type_dup_right(exp1);
     }
 
     if (rch1->state_type == STATE_DOT) {
         // Exp DOT ID
-        if (exp1->type != TYPE_STRUCT) {
-            symbol_error(13, rln, "variable not a struct", "");
-            return type_new_invalid();
-        }
+
         SymNode* ret = NULL;
         for (int i = 0; i < exp1->data_struct.size; i++) {
             if (!strcmp(exp1->data_struct.types[i]->name, rch2->data_str)) {
@@ -653,46 +518,25 @@ SymNode* state_Exp(TreeNode* root) {
                 break;
             }
         }
-        if (!ret) {
-            symbol_error(14, rln, "unknown field: ", rch2->data_str);
-            return type_new_invalid();
-        }
+
         return ret;
     } else if (rsz == 4) {
         // Exp LB Exp RB
-        if (exp1->type != TYPE_ARRAY) {
-            symbol_error(10, rln, "indexing non-array variable", "");
-            return type_new_invalid();
-        }
-        if (!typeEqual(exp2, &int_entity)) {
-            symbol_error(12, rln, "index is not int", "");
-        }
+
         return exp1->data_array.next;
     }
 
     switch (rch1->state_type) {
         case STATE_ASSIGNOP:
             // Exp ASSIGNOP Exp
-            if (!typeEqual(exp1, exp2)) {
-                symbol_error(5, rln, "assign between different types", "");
-                return type_new_invalid();
-            }
-            if (exp1->is_right) {
-                symbol_error(6, rln, "right value can't be assigned", "");
-                return type_new_invalid();
-            }
+
             return exp1;
             break;
         case STATE_AND:
         case STATE_OR:
             // Exp AND Exp
             // Exp OR Exp
-            if (!typeEqual(exp1, &int_entity) ||
-                !typeEqual(exp2, &int_entity)) {
-                symbol_error(
-                    7, rln, "can't do logic operation on types except int", "");
-                return type_new_invalid();
-            }
+
             return type_dup_right(exp1);
             break;
         case STATE_RELOP:
@@ -705,19 +549,7 @@ SymNode* state_Exp(TreeNode* root) {
             // Exp MINUS Exp
             // Exp STAR Exp
             // Exp DIV Exp
-            if (!typeEqual(exp1, exp2)) {
-                symbol_error(7, rln,
-                             "cant't do operation between different types", "");
-                return type_new_invalid();
-            }
-            if (!typeEqual(exp1, &int_entity) &&
-                !typeEqual(exp1, &float_entity)) {
-                symbol_error(7, rln,
-                             "cant't do arithmetic operation on types "
-                             "except int and float",
-                             "");
-                return type_new_invalid();
-            }
+
             return type_dup_right(exp1);
             break;
     }
