@@ -15,3 +15,5 @@ report.pdf
 parser
 *.zip
 Code/symtab_legacy.c
+
+.DS_Store

@@ -2,10 +2,11 @@
 # ************ 遇到不明白的地方请google以及阅读手册 *************
 
 # 编译器设定和编译选项
-CC = gcc
-FLEX = flex
-BISON = bison
+CC = gcc-9
+FLEX = /usr/local/opt/flex/bin/flex
+BISON = /usr/local/opt/bison/bin/bison
 CFLAGS = -std=c99
+LDFLAGS = -L/usr/local/opt/bison/lib -L/usr/local/opt/flex/lib
 
 # 编译目标：src目录下的所有.c文件
 CFILES = $(shell find ./ -name "*.c")
@@ -18,7 +19,7 @@ LFO = $(LFC:.c=.o)
 YFO = $(YFC:.c=.o)
 
 parser: syntax $(filter-out $(LFO),$(OBJS))
-	$(CC) -o parser $(filter-out $(LFO),$(OBJS)) -lfl -ly
+	$(CC) -o parser $(filter-out $(LFO),$(OBJS)) -lfl -ly $(LDFLAGS)
 
 syntax: lexical syntax-c
 	$(CC) -c $(YFC) -o $(YFO)
@@ -37,7 +38,7 @@ test:
 ifdef target
 	./parser ../Test/$(target).cmm
 else
-	./parser ../Test/tmp/test.cmm
+	./parser ../Test/test1.cmm
 endif
 
 diff:
