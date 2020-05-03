@@ -39,6 +39,7 @@ typedef struct SymNode {
     int type;
     int is_right;
     int line;
+    int is_param;
 } SymNode;
 
 int typeEqual(const SymNode* a, const SymNode* b);

@@ -291,7 +291,11 @@ void state_CompSt(TreeNode* root, SymNode* ret, SymNode* args) {
 
             CODE_INSERT(CODE_PARAM, 0, OP_NEW_VAR(name), NULL, NULL);
 
-            symtab_insert_now(name, args->data_struct.types[i]);
+            // Set param flag
+            SymNode* arg = type_dup_left(args->data_struct.types[i]);
+            arg->is_param = 1;
+
+            symtab_insert_now(name, arg);
         }
     }
 
@@ -421,12 +425,19 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
         SymNode* id = symtab_lookup_all(rch0->data_str);
         if (rsz == 1) {
             // ID
-            CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(target),
-                        OP_NEW_VAR(rch0->data_str), NULL);
-
             int addr_tmp = tmpvar_num++;
-            CODE_INSERT(CODE_GETADDR, 0, OP_NEW_TEMP(addr_tmp),
-                        OP_NEW_VAR(rch0->data_str), NULL);
+
+            if (id->is_param &&
+                (id->type == TYPE_ARRAY || id->type == TYPE_STRUCT)) {
+                CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(addr_tmp),
+                            OP_NEW_VAR(rch0->data_str), NULL);
+            } else {
+                CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(target),
+                            OP_NEW_VAR(rch0->data_str), NULL);
+
+                CODE_INSERT(CODE_GETADDR, 0, OP_NEW_TEMP(addr_tmp),
+                            OP_NEW_VAR(rch0->data_str), NULL);
+            }
 
             return ExpRet_addr(id, addr_tmp);
         }
@@ -587,7 +598,12 @@ void state_Cond(TreeNode* root, int label_true, int label_false) {}
 void state_Args(TreeNode* root, SymNode** type_pos, int* tmp_pos) {
     // Exp
     *tmp_pos = tmpvar_num++;
-    *type_pos = state_Exp(rch0, *tmp_pos).node;
+    ExpRet_t exp = state_Exp(rch0, *tmp_pos);
+    *type_pos = exp.node;
+    if (exp.node->type == TYPE_STRUCT || exp.node->type == TYPE_ARRAY) {
+        *tmp_pos = exp.addr;
+    }
+    // *type_pos = state_Exp(rch0, *tmp_pos).node;
     if (rsz == 3) {
         // Exp COMMA Args
         state_Args(rch2, type_pos + 1, tmp_pos + 1);

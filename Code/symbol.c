@@ -46,6 +46,7 @@ SymNode* type_new() {
     ret->type = TYPE_INVALID;
     ret->is_right = 0;
     ret->line = 0;
+    ret->is_param = 0;
     return ret;
 }
 
