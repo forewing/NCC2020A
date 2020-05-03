@@ -2,6 +2,7 @@
 #define IR_H
 
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "helper.h"
@@ -10,8 +11,8 @@ enum OP_TYPE {
     OP_NULL,
     OP_CONST,
     OP_VAR,
-    // OP_GETADDR,
-    // OP_GETDATA,
+    OP_GETADDR,
+    OP_GETDATA,
     OP_FUNC,
     OP_LABEL,
     OP_TEMP
@@ -22,6 +23,7 @@ typedef struct IrOprand {
     union {
         const char* data_str;
         int data_int;
+        struct IrOprand* data_op;
     };
 } IrOprand;
 
@@ -66,6 +68,7 @@ typedef struct IrCode {
 IrOprand* IrOprand_new(int type);
 IrOprand* IrOprand_new_int(int type, int data);
 IrOprand* IrOprand_new_str(int type, const char* data);
+IrOprand* IrOprand_new_op(int type, IrOprand* data);
 
 #define OP_NEW_TEMP(__TMP_ID__) IrOprand_new_int(OP_TEMP, __TMP_ID__)
 #define OP_NEW_CONST(__CONST_VAL__) IrOprand_new_int(OP_CONST, __CONST_VAL__)
@@ -75,6 +78,9 @@ IrCode* IrCode_new(int type, int data, IrOprand* x, IrOprand* y, IrOprand* z);
 
 void IrCode_insert(IrCode* pos, IrCode* elem);
 void IrCode_delete(IrCode* pos);
+
+void IrCode_print(FILE* fp, IrCode* root);
+const char* IrOprand_print(IrOprand* op);
 
 extern IrCode* ircode_list;
 extern int tmpvar_num;
