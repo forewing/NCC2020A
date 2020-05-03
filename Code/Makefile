@@ -47,7 +47,7 @@ ifdef target
 endif
 
 gdb: syntax-c lexical
-	$(CC) -g -o parser-gdb $(filter-out $(LFC),$(CFILES)) -lfl -ly
+	$(CC) -g -o parser-gdb $(filter-out $(LFC),$(CFILES)) -lfl -ly $(LDFLAGS)
 
 lab1: parser
 	for i in `seq 1 10`; do echo "Testing Lab1/test$$i" && make -s diff target=Lab1/test$$i; done

@@ -525,8 +525,6 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
         return state_Exp(rch1, target);
     }
 
-    // TODO
-
     if (rch0->state_type == STATE_NOT || rch1->state_type == STATE_RELOP ||
         rch1->state_type == STATE_AND || rch1->state_type == STATE_OR) {
         // NOT, RELOP, AND, OR
@@ -655,7 +653,6 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
 }
 
 void state_Cond(TreeNode* root, int label_true, int label_false) {
-    // TODO
     // Must return in condition once match
     if (rsz == 2 && rch0->state_type == STATE_NOT) {
         // NOT Exp
