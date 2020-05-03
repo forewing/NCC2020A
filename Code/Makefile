@@ -2,7 +2,7 @@
 # ************ 遇到不明白的地方请google以及阅读手册 *************
 
 # 编译器设定和编译选项
-CC = gcc-9
+CC = gcc
 FLEX = /usr/local/opt/flex/bin/flex
 BISON = /usr/local/opt/bison/bin/bison
 CFLAGS = -std=c99
