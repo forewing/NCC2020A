@@ -10,8 +10,8 @@ enum OP_TYPE {
     OP_NULL,
     OP_CONST,
     OP_VAR,
-    OP_GETADDR,
-    OP_GETDATA,
+    // OP_GETADDR,
+    // OP_GETDATA,
     OP_FUNC,
     OP_LABEL,
     OP_TEMP
@@ -66,6 +66,10 @@ typedef struct IrCode {
 IrOprand* IrOprand_new(int type);
 IrOprand* IrOprand_new_int(int type, int data);
 IrOprand* IrOprand_new_str(int type, const char* data);
+
+#define OP_NEW_TEMP(__TMP_ID__) IrOprand_new_int(OP_TEMP, __TMP_ID__)
+#define OP_NEW_CONST(__CONST_VAL__) IrOprand_new_int(OP_CONST, __CONST_VAL__)
+#define OP_NEW_VAR(__VAR_NAME__) IrOprand_new_str(OP_VAR, __VAR_NAME__)
 
 IrCode* IrCode_new(int type, int data, IrOprand* x, IrOprand* y, IrOprand* z);
 
