@@ -490,12 +490,15 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
         // ID LP Args RP
         // ID LP RP
 
-        // TODO: Read, Write
         if (rsz == 3) {
             // ID LP RP
 
-            CODE_INSERT(CODE_CALL, 0, OP_NEW_TEMP(target),
-                        IrOprand_new_str(OP_FUNC, rch0->data_str), NULL);
+            if (!strcmp("read", rch0->data_str)) {
+                CODE_INSERT(CODE_READ, 0, OP_NEW_TEMP(target), NULL, NULL);
+            } else {
+                CODE_INSERT(CODE_CALL, 0, OP_NEW_TEMP(target),
+                            IrOprand_new_str(OP_FUNC, rch0->data_str), NULL);
+            }
 
             return ExpRet_val(type_dup_right(id->data_func.ret));
         } else {
@@ -506,14 +509,21 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
             int* tmp_pos = (int*)malloc(sizeof(int) * rch2->data_int);
             state_Args(rch2, args->data_struct.types, tmp_pos);
 
-            for (int i = args->data_struct.size - 1; i >= 0; i--) {
-                CODE_INSERT(CODE_PARAM, 0, OP_NEW_TEMP(tmp_pos[i]), NULL, NULL);
+            if (!strcmp("write", rch0->data_str)) {
+                CODE_INSERT(CODE_WRITE, 0, OP_NEW_TEMP(tmp_pos[0]), NULL, NULL);
+                CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(target),
+                            OP_NEW_CONST(0), NULL);
+            } else {
+                for (int i = args->data_struct.size - 1; i >= 0; i--) {
+                    CODE_INSERT(CODE_PARAM, 0, OP_NEW_TEMP(tmp_pos[i]), NULL,
+                                NULL);
+                }
+
+                free(tmp_pos);
+
+                CODE_INSERT(CODE_CALL, 0, OP_NEW_TEMP(target),
+                            IrOprand_new_str(OP_FUNC, rch0->data_str), NULL);
             }
-
-            free(tmp_pos);
-
-            CODE_INSERT(CODE_CALL, 0, OP_NEW_TEMP(target),
-                        IrOprand_new_str(OP_FUNC, rch0->data_str), NULL);
 
             return ExpRet_val(type_dup_right(id->data_func.ret));
         }
