@@ -656,6 +656,66 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
 
 void state_Cond(TreeNode* root, int label_true, int label_false) {
     // TODO
+    // Must return in condition once match
+    if (rsz == 2 && rch0->state_type == STATE_NOT) {
+        // NOT Exp
+
+        state_Cond(rch1, label_false, label_true);
+
+        return;
+    } else if (rsz == 3) {
+        if (rch1->state_type == STATE_RELOP) {
+            // Exp1 RELOP Exp2
+
+            int tmp1 = tmpvar_num++;
+            int tmp2 = tmpvar_num++;
+
+            state_Exp(rch0, tmp1);
+            state_Exp(rch2, tmp2);
+
+            CODE_INSERT(CODE_GOCOND, rch1->data_int, OP_NEW_TEMP(tmp1),
+                        OP_NEW_TEMP(tmp2), OP_NEW_LABEL(label_true));
+
+            CODE_INSERT(CODE_GOTO, 0, OP_NEW_LABEL(label_false), NULL, NULL);
+
+            return;
+        } else if (rch1->state_type == STATE_AND) {
+            // Exp1 and Exp2
+
+            int label1 = label_num++;
+
+            state_Cond(rch0, label1, label_false);
+            CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label1), NULL, NULL);
+
+            state_Cond(rch2, label_true, label_false);
+
+            return;
+        } else if (rch1->state_type == STATE_OR) {
+            // Exp1 or Exp2
+
+            int label1 = label_num++;
+
+            state_Cond(rch0, label_true, label1);
+            CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label1), NULL, NULL);
+
+            state_Cond(rch2, label_true, label_false);
+
+            return;
+        }
+
+        // Fall to others
+    }
+
+    // Others
+
+    int tmp1 = tmpvar_num++;
+    state_Exp(root, tmp1);
+    CODE_INSERT(CODE_GOCOND, RELOP_NE, OP_NEW_TEMP(tmp1), OP_NEW_CONST(0),
+                OP_NEW_LABEL(label_true));
+
+    CODE_INSERT(CODE_GOTO, 0, OP_NEW_LABEL(label_false), NULL, NULL);
+
+    return;
 }
 
 void state_Args(TreeNode* root, SymNode** type_pos, int* tmp_pos) {
