@@ -87,13 +87,13 @@ const char* IrOprand_print(IrOprand* op) {
             MALLOC_PRINTF(ret, "*%s", IrOprand_print(op->data_op));
             break;
         case OP_FUNC:
-            MALLOC_PRINTF(ret, "%s", op->data_str);
+            MALLOC_PRINTF(ret, "f_%s", op->data_str);
             break;
         case OP_LABEL:
-            MALLOC_PRINTF(ret, "%s", op->data_str);
+            MALLOC_PRINTF(ret, "l_%d", op->data_int);
             break;
         case OP_TEMP:
-            MALLOC_PRINTF(ret, "t_%s", op->data_str);
+            MALLOC_PRINTF(ret, "t_%d", op->data_int);
             break;
         default:
             return "INVALID";
@@ -105,9 +105,10 @@ const char* IrOprand_print(IrOprand* op) {
 void IrCode_print(FILE* fp, IrCode* root) {
     IrCode* ptr = root;
     while (ptr) {
-        char* x = IrOprand_print(ptr->x);
-        char* y = IrOprand_print(ptr->y);
-        char* z = IrOprand_print(ptr->z);
+        const char* x = IrOprand_print(ptr->x);
+        const char* y = IrOprand_print(ptr->y);
+        const char* z = IrOprand_print(ptr->z);
+        const char* relop = "INVALID";
 
         switch (ptr->type) {
             case CODE_NOP:
@@ -146,6 +147,20 @@ void IrCode_print(FILE* fp, IrCode* root) {
                 fprintf(fp, "GOTO %s\n", x);
                 break;
             case CODE_GOCOND:
+                if (ptr->data_int == RELOP_EQ)
+                    relop = "==";
+                else if (ptr->data_int == RELOP_GE)
+                    relop = ">=";
+                else if (ptr->data_int == RELOP_GT)
+                    relop = ">";
+                else if (ptr->data_int == RELOP_LE)
+                    relop = "<=";
+                else if (ptr->data_int == RELOP_LT)
+                    relop = "<";
+                else if (ptr->data_int == RELOP_NE)
+                    relop = "!=";
+                else
+                    relop = "INVALID";
                 fprintf(fp, "IF %s [relop] %s GOTO %s\n", x, y, z);
                 break;
             case CODE_RET:

@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 #include "helper.h"
+#include "tree.h"
 
 enum OP_TYPE {
     OP_NULL,
