@@ -1,9 +1,9 @@
 #include "ir.h"
 
 IrCode* ircode_list = NULL;
-int tmpvar_num = 0;
-int label_num = 0;
-int compst_num = 0;
+int tmpvar_num = 1;
+int label_num = 1;
+int compst_num = 1;
 
 IrOprand* IrOprand_new(int type) {
     IrOprand* ret = (IrOprand*)malloc(sizeof(IrOprand));
