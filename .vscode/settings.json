@@ -1,5 +1,15 @@
 {
     "files.associations": {
         "symbol.h": "c"
-    }
+    },
+    "cSpell.words": [
+        "ASSIGNOP",
+        "GOCOND",
+        "Oprand",
+        "RELOP",
+        "YYDEBUG",
+        "dimen",
+        "fprintf",
+        "yyerror"
+    ]
 }

@@ -66,7 +66,7 @@ void state_Def(TreeNode* root, SymNode** type_pos);
 void state_DecList(TreeNode* root, SymNode* type, SymNode** type_pos);
 void state_Dec(TreeNode* root, SymNode* type, SymNode** type_pos);
 ExpRet_t state_Exp(TreeNode* root, int target);
-void state_Cond(TreeNode* root, int label_true, int laber_false);
+void state_Cond(TreeNode* root, int label_true, int label_false);
 void state_Args(TreeNode* root, SymNode** type_pos, int* tmp_pos);
 
 void symtab_build() {
@@ -582,7 +582,7 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
     return ExpRet_addr(type_new_invalid(), -1);
 }
 
-void state_Cond(TreeNode* root, int label_true, int laber_false) {}
+void state_Cond(TreeNode* root, int label_true, int label_false) {}
 
 void state_Args(TreeNode* root, SymNode** type_pos, int* tmp_pos) {
     // Exp
