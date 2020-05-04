@@ -643,12 +643,61 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
     if (rch1->state_type == STATE_ASSIGNOP) {
         // Exp ASSIGNOP Exp
 
-        if (exp1.addr == -1) {
-            // Must be variable
-            CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_VAR(exp1.node->name), OP_NEW_TEMP(tmp_2), NULL);
+        if (exp1.node->type == TYPE_ARRAY && exp2.node->type == TYPE_ARRAY) {
+            // Assign between arrays
+
+            int count = exp1.node->size;
+            if (exp2.node->size < count)
+                count = exp2.node->size;
+
+            int iter_tmp = tmpvar_new();
+            int swap_tmp = tmpvar_new();
+            int ptr1_tmp = tmpvar_new();
+            int ptr2_tmp = tmpvar_new();
+            int test_label = label_new();
+            int done_label = label_new();
+
+            // iter := count / 4
+            // ptr1 := &exp1
+            // ptr2 := &exp2
+            // test:
+            //      if iter <= 0 goto done
+            //      swap := *ptr_2
+            //      *ptr_1 := swap
+            //      iter -= 1
+            //      ptr_1 += 4
+            //      ptr_2 += 4
+            //      goto test
+            // done:
+
+            CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(iter_tmp), OP_NEW_CONST(count / 4), NULL);
+            CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(ptr1_tmp), OP_NEW_TEMP(exp1.addr), NULL);
+            CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(ptr2_tmp), OP_NEW_TEMP(exp2.addr), NULL);
+
+            CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(test_label), NULL, NULL);
+
+            CODE_INSERT(CODE_GOCOND, RELOP_LE, OP_NEW_TEMP(iter_tmp), OP_NEW_CONST(0), OP_NEW_LABEL(done_label));
+            CODE_INSERT(CODE_GETDATA, 0, OP_NEW_TEMP(swap_tmp), OP_NEW_TEMP(ptr2_tmp), NULL);
+            CODE_INSERT(CODE_SETDATA, 0, OP_NEW_TEMP(ptr1_tmp), OP_NEW_TEMP(swap_tmp), NULL);
+
+            CODE_INSERT(CODE_SUB, 0, OP_NEW_TEMP(iter_tmp), OP_NEW_TEMP(iter_tmp), OP_NEW_CONST(1));
+            CODE_INSERT(CODE_ADD, 0, OP_NEW_TEMP(ptr1_tmp), OP_NEW_TEMP(ptr1_tmp), OP_NEW_CONST(4));
+            CODE_INSERT(CODE_ADD, 0, OP_NEW_TEMP(ptr2_tmp), OP_NEW_TEMP(ptr2_tmp), OP_NEW_CONST(4));
+
+            CODE_INSERT(CODE_GOTO, 0, OP_NEW_LABEL(test_label), NULL, NULL);
+
+            CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(done_label), NULL, NULL);
+
         } else {
-            // Addr
-            CODE_INSERT(CODE_SETDATA, 0, OP_NEW_TEMP(exp1.addr), OP_NEW_TEMP(tmp_2), NULL);
+            // Others
+
+            if (exp1.addr == -1) {
+                // Must be variable
+                CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_VAR(exp1.node->name), OP_NEW_TEMP(tmp_2), NULL);
+            } else {
+                // Addr
+                CODE_INSERT(CODE_SETDATA, 0, OP_NEW_TEMP(exp1.addr), OP_NEW_TEMP(tmp_2), NULL);
+            }
         }
 
         CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(target), OP_NEW_TEMP(tmp_2), NULL);
