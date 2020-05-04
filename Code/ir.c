@@ -213,6 +213,33 @@ void ircode_opt_useless(IrCode* tail) {
     }
 }
 
-void ircode_opt_address(IrCode* tail) {}
+void ircode_opt_address_once(IrOprand* op) {
+    if (!op)
+        return;
+
+    if (op->type == OP_GETADDR) {
+        IrOprand* op2 = op->data_op;
+        if (op2 && op2->type == OP_GETDATA && op2->data_op) {
+            memcpy(op, op2->data_op, sizeof(IrOprand));
+            ircode_opt_address_once(op);
+        }
+    } else if (op->type == OP_GETDATA) {
+        IrOprand* op2 = op->data_op;
+        if (op2 && op2->type == OP_GETADDR && op2->data_op) {
+            memcpy(op, op2->data_op, sizeof(IrOprand));
+            ircode_opt_address_once(op);
+        }
+    }
+}
+
+void ircode_opt_address(IrCode* tail) {
+    IrCode* ptr = tail->next;
+    while (ptr != tail) {
+        ircode_opt_address_once(ptr->x);
+        ircode_opt_address_once(ptr->y);
+        ircode_opt_address_once(ptr->z);
+        ptr = ptr->next;
+    }
+}
 
 void ircode_opt_eval(IrCode* tail) {}
