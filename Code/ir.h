@@ -84,8 +84,5 @@ int tmpvar_new();
 int label_new();
 
 void ircode_opt(IrCode* tail);
-void ircode_opt_useless(IrCode* tail);
-void ircode_opt_address(IrCode* tail);
-void ircode_opt_eval(IrCode* tail);
 
 #endif

@@ -193,13 +193,19 @@ void IrCode_print(FILE* fp, IrCode* tail) {
     }
 }
 
+void ircode_opt_zero_tmp(IrCode* tail);
+void ircode_opt_exist_once(IrCode* tail);
+void ircode_opt_address(IrCode* tail);
+void ircode_opt_eval(IrCode* tail);
+
 void ircode_opt(IrCode* tail) {
-    ircode_opt_useless(tail);
+    ircode_opt_zero_tmp(tail);
+    ircode_opt_exist_once(tail);
     ircode_opt_address(tail);
     ircode_opt_eval(tail);
 }
 
-void ircode_opt_useless(IrCode* tail) {
+void ircode_opt_zero_tmp(IrCode* tail) {
     IrCode* ptr = tail->next;
     while (ptr != tail) {
         if ((ptr->type == CODE_ASSIGN || ptr->type == CODE_ADD || ptr->type == CODE_SUB || ptr->type == CODE_MUL ||
@@ -211,6 +217,50 @@ void ircode_opt_useless(IrCode* tail) {
             ptr = ptr->next;
         }
     }
+}
+
+int ircode_opt_exist_once_helper(IrOprand* op) {
+    if (!op)
+        return -1;
+    if (op->type == OP_TEMP)
+        return op->data_int;
+    if (op->type == OP_GETADDR || op->type == OP_GETDATA)
+        return ircode_opt_exist_once_helper(op->data_op);
+    return -1;
+}
+
+void ircode_opt_exist_once(IrCode* tail) {
+    int* tmp_used_times = (int*)malloc(sizeof(int) * tmpvar_num);
+    for (int i = 0; i < tmpvar_num; i++)
+        tmp_used_times[i] = 0;
+
+    IrCode* ptr = tail->next;
+    while (ptr != tail) {
+        int tmp_id[3];
+        tmp_id[0] = ircode_opt_exist_once_helper(ptr->x);
+        tmp_id[1] = ircode_opt_exist_once_helper(ptr->y);
+        tmp_id[2] = ircode_opt_exist_once_helper(ptr->z);
+        for (int i = 0; i < 3; i++) {
+            if (tmp_id[i] != -1) {
+                tmp_used_times[tmp_id[i]]++;
+            }
+        }
+        ptr = ptr->next;
+    }
+
+    ptr = tail->next;
+    while (ptr != tail) {
+        if ((ptr->type == CODE_ASSIGN || ptr->type == CODE_ADD || ptr->type == CODE_SUB || ptr->type == CODE_MUL ||
+             ptr->type == CODE_DIV) &&
+            ptr->x->type == OP_TEMP && tmp_used_times[ptr->x->data_int] <= 1) {
+            ptr = ptr->next;
+            IrCode_delete(ptr->prev);
+        } else {
+            ptr = ptr->next;
+        }
+    }
+
+    free(tmp_used_times);
 }
 
 void ircode_opt_address_once(IrOprand* op) {
