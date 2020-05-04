@@ -94,7 +94,11 @@ const char* IrOprand_print(IrOprand* op) {
             MALLOC_PRINTF(ret, "*%s", IrOprand_print(op->data_op));
             break;
         case OP_FUNC:
-            MALLOC_PRINTF(ret, "%s", op->data_str);
+            if (!strcmp(op->data_str, "main")) {
+                MALLOC_PRINTF(ret, "%s", op->data_str);
+            } else {
+                MALLOC_PRINTF(ret, "f_%s", op->data_str);
+            }
             break;
         case OP_LABEL:
             MALLOC_PRINTF(ret, "l_%d", op->data_int);
