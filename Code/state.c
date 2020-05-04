@@ -82,6 +82,7 @@ void symtab_build() {
 }
 
 void state_Program(TreeNode* root) {
+    // Add read, write to symtab
     SymNode* func_write = type_new_func(type_dup_right(&int_entity), type_new_struct(1));
     func_write->name = "write";
     func_write->is_right = 1;
@@ -130,6 +131,7 @@ void state_ExtDef(TreeNode* root) {
     if (rch2->state_type == STATE_CompSt) {
         // Specifier FunDec CompSt
 
+        // FUNCTION func->name :
         CODE_INSERT(CODE_FUNC, 0, IrOprand_new_str(OP_FUNC, func->name), NULL, NULL);
 
         state_CompSt(rch2, func->data_func.ret, func->data_func.args);
@@ -158,6 +160,7 @@ SymNode* state_Specifier(TreeNode* root) {
                 return type_new_int(0);
                 break;
             case TYPENAME_FLOAT:
+                // Float not allowed
                 bug_number++;
                 return type_new_float(0.0);
                 break;
@@ -238,6 +241,7 @@ SymNode* state_VarDec(TreeNode* root, SymNode* type) {
         SymNode* dimen = type_dup_left(type);
         dimen->name = elem->children[0]->data_str;
 
+        // Construct array type from inner to outter, with size info
         for (int i = 0; i < root->data_int; i++) {
             SymNode* dimen_new = type_new_array(dimen);
             dimen_new->data_array.dimen = i + 1;
@@ -349,14 +353,13 @@ void state_Stmt(TreeNode* root, SymNode* ret) {
         int label2 = label_new();
         int label3 = label_new();
 
-        CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label1), NULL, NULL);
+        // Same with textbook, skip detailed comments
 
+        CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label1), NULL, NULL);
         state_Cond(rch2, label2, label3);
 
         CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label2), NULL, NULL);
-
         state_Stmt(rch4, ret);
-
         CODE_INSERT(CODE_GOTO, 0, OP_NEW_LABEL(label1), NULL, NULL);
 
         CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label3), NULL, NULL);
@@ -366,10 +369,11 @@ void state_Stmt(TreeNode* root, SymNode* ret) {
         int label1 = label_new();
         int label2 = label_new();
 
+        // Same with textbook, skip detailed comments
+
         state_Cond(rch2, label1, label2);
 
         CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label1), NULL, NULL);
-
         state_Stmt(rch4, ret);
 
         CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label2), NULL, NULL);
@@ -380,16 +384,15 @@ void state_Stmt(TreeNode* root, SymNode* ret) {
         int label2 = label_new();
         int label3 = label_new();
 
+        // Same with textbook, skip detailed comments
+
         state_Cond(rch2, label1, label2);
 
         CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label1), NULL, NULL);
-
         state_Stmt(rch4, ret);
-
         CODE_INSERT(CODE_GOTO, 0, OP_NEW_LABEL(label3), NULL, NULL);
 
         CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label2), NULL, NULL);
-
         state_Stmt(rch6, ret);
 
         CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label3), NULL, NULL);
@@ -432,8 +435,6 @@ void state_Dec(TreeNode* root, SymNode* type, SymNode** type_pos) {
     // type already duped
     SymNode* node = state_VarDec(rch0, type);
 
-    // printf("%s: %d\n", node->name, node->size);
-
     // Insert
 
     symtab_insert_now(node->name, node);
@@ -443,8 +444,10 @@ void state_Dec(TreeNode* root, SymNode* type, SymNode** type_pos) {
         *type_pos = node;
     } else {
         // Normal Dec
-        if (node->type == TYPE_STRUCT || node->type == TYPE_ARRAY)
+        if (node->type == TYPE_STRUCT || node->type == TYPE_ARRAY) {
+            // Array, should alloc spaces
             CODE_INSERT(CODE_DEC, node->size, OP_NEW_VAR(node->name), NULL, NULL);
+        }
     }
 
     // VarDec
@@ -454,6 +457,7 @@ void state_Dec(TreeNode* root, SymNode* type, SymNode** type_pos) {
         int target = tmpvar_new();
         state_Exp(rch2, target);
 
+        // Init value
         CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_VAR(node->name), OP_NEW_TEMP(target), NULL);
     }
 }
@@ -466,6 +470,7 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
         SymNode* type = type_new_int(rch0->data_int);
         type->is_right = 1;
 
+        // Target := value
         CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(target), OP_NEW_CONST(rch0->data_int), NULL);
 
         return ExpRet_val(type);
@@ -486,10 +491,12 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
             int addr_tmp = tmpvar_new();
 
             if (id->is_param && (id->type == TYPE_ARRAY || id->type == TYPE_STRUCT)) {
+                // Is a reference (a popinter, actually)
                 CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(addr_tmp), OP_NEW_VAR(rch0->data_str), NULL);
-            } else {
                 CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(target), OP_NEW_VAR(rch0->data_str), NULL);
-
+            } else {
+                // Put value and address
+                CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(target), OP_NEW_VAR(rch0->data_str), NULL);
                 CODE_INSERT(CODE_GETADDR, 0, OP_NEW_TEMP(addr_tmp), OP_NEW_VAR(rch0->data_str), NULL);
             }
 
@@ -513,21 +520,24 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
 
             SymNode* args = type_new_struct(rch2->data_int);
 
+            // Let state_Args to fill args
             int* tmp_pos = (int*)malloc(sizeof(int) * rch2->data_int);
             state_Args(rch2, args->data_struct.types, tmp_pos);
 
             if (!strcmp("write", rch0->data_str)) {
                 CODE_INSERT(CODE_WRITE, 0, OP_NEW_TEMP(tmp_pos[0]), NULL, NULL);
+
+                // Set return value to 0
                 CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(target), OP_NEW_CONST(0), NULL);
             } else {
                 for (int i = args->data_struct.size - 1; i >= 0; i--) {
                     CODE_INSERT(CODE_ARG, 0, OP_NEW_TEMP(tmp_pos[i]), NULL, NULL);
                 }
 
-                free(tmp_pos);
-
                 CODE_INSERT(CODE_CALL, 0, OP_NEW_TEMP(target), IrOprand_new_str(OP_FUNC, rch0->data_str), NULL);
             }
+
+            free(tmp_pos);
 
             return ExpRet_val(type_dup_right(id->data_func.ret));
         }
@@ -546,12 +556,13 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
         int label1 = label_new();
         int label2 = label_new();
 
+        // Same with textbook, skip detailed comments
+
         CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(target), OP_NEW_CONST(0), NULL);
 
         state_Cond(root, label1, label2);
 
         CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label1), NULL, NULL);
-
         CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(target), OP_NEW_CONST(1), NULL);
 
         CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label2), NULL, NULL);
@@ -559,10 +570,11 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
         return ExpRet_val(type_new_int(0));
     }
 
+    // Fill exp1, exp2 values, addresses
+
     int tmp_1 = tmpvar_new();
     int tmp_2 = tmpvar_new();
 
-    // if (rsz == )
     ExpRet_t exp1;
     if (rch0->state_type == STATE_Exp) {
         // others
@@ -607,6 +619,8 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
         // Exp DOT ID
         int offset = 0;
 
+        // Find offset first
+
         SymNode* ret = NULL;
         for (int i = 0; i < exp1.node->data_struct.size; i++) {
             SymNode* ptr = exp1.node->data_struct.types[i];
@@ -618,6 +632,9 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
             }
         }
 
+        // Calculate target address
+        // target_address := &exp1 + id_offset
+
         int tmp_addr = tmpvar_new();
         CODE_INSERT(CODE_ADD, 0, OP_NEW_TEMP(tmp_addr), OP_NEW_TEMP(exp1.addr), OP_NEW_CONST(offset));
 
@@ -628,6 +645,9 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
 
     if (rch1->state_type == STATE_LB) {
         // Exp LB Exp RB
+
+        // A single exp1's size can be get by exp1.next.size
+        // target_address := &exp1 + exp1.next.size * int(exp2)
 
         int tmp_addr = tmpvar_new();
         CODE_INSERT(CODE_MUL, 0, OP_NEW_TEMP(tmp_addr), OP_NEW_TEMP(tmp_2),
@@ -644,7 +664,8 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
         // Exp ASSIGNOP Exp
 
         if (exp1.node->type == TYPE_ARRAY && exp2.node->type == TYPE_ARRAY) {
-            // Assign between arrays
+            // DEPP COPY between BUILTIN arrays
+            // Is C-- golang? (:
 
             int count = exp1.node->size;
             if (exp2.node->size < count)
@@ -656,6 +677,8 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
             int ptr2_tmp = tmpvar_new();
             int test_label = label_new();
             int done_label = label_new();
+
+            // A while loop
 
             // iter := count / 4
             // ptr1 := &exp1
@@ -669,6 +692,7 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
             //      ptr_2 += 4
             //      goto test
             // done:
+            //  ...
 
             CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(iter_tmp), OP_NEW_CONST(count / 4), NULL);
             CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(ptr1_tmp), OP_NEW_TEMP(exp1.addr), NULL);
@@ -692,24 +716,29 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
             // Others
 
             if (exp1.addr == -1) {
-                // Must be variable
+                // Variable
+                // Assign directly
                 CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_VAR(exp1.node->name), OP_NEW_TEMP(tmp_2), NULL);
             } else {
-                // Addr
+                // Address
                 CODE_INSERT(CODE_SETDATA, 0, OP_NEW_TEMP(exp1.addr), OP_NEW_TEMP(tmp_2), NULL);
             }
         }
 
+        // Fill target
         CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(target), OP_NEW_TEMP(tmp_2), NULL);
 
         return ExpRet_val(exp1.node);
     }
 
+    // Fail here
     CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(target), OP_NEW_CONST(-1), NULL);
-    return ExpRet_addr(type_new_invalid(), -1);
+    return ExpRet_addr(type_new_invalid(), 0);
 }
 
 void state_Cond(TreeNode* root, int label_true, int label_false) {
+    // Exactly the same with textbook, no detailed comments
+
     // Must return in condition once match
     if (rsz == 2 && rch0->state_type == STATE_NOT) {
         // NOT Exp
@@ -778,7 +807,6 @@ void state_Args(TreeNode* root, SymNode** type_pos, int* tmp_pos) {
     if (exp.node->type == TYPE_STRUCT || exp.node->type == TYPE_ARRAY) {
         *tmp_pos = exp.addr;
     }
-    // *type_pos = state_Exp(rch0, *tmp_pos).node;
     if (rsz == 3) {
         // Exp COMMA Args
         state_Args(rch2, type_pos + 1, tmp_pos + 1);
