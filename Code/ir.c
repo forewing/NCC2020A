@@ -113,8 +113,10 @@ const char* IrOprand_print(IrOprand* op) {
     return ret;
 }
 
-void IrCode_print(FILE* fp, IrCode* root) {
-    IrCode* ptr = root;
+void IrCode_print(FILE* fp, IrCode* tail) {
+    IrCode* ptr = tail;
+    while (ptr->prev)
+        ptr = ptr->prev;
     while (ptr) {
         const char* x = IrOprand_print(ptr->x);
         const char* y = IrOprand_print(ptr->y);
@@ -202,3 +204,19 @@ void IrCode_print(FILE* fp, IrCode* root) {
         ptr = ptr->next;
     }
 }
+
+void ircode_opt(IrCode* tail) {
+    ircode_opt_useless(tail);
+    ircode_opt_address(tail);
+    ircode_opt_eval(tail);
+}
+
+void ircode_opt_useless(IrCode* tail) {
+    IrCode* ptr = tail;
+    while (ptr->prev)
+        ptr = ptr->prev;
+}
+
+void ircode_opt_address(IrCode* tail) {}
+
+void ircode_opt_eval(IrCode* tail) {}

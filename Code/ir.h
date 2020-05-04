@@ -72,7 +72,7 @@ IrCode* IrCode_new(int type, int data, IrOprand* x, IrOprand* y, IrOprand* z);
 void IrCode_insert(IrCode* pos, IrCode* elem);
 void IrCode_delete(IrCode* pos);
 
-void IrCode_print(FILE* fp, IrCode* root);
+void IrCode_print(FILE* fp, IrCode* tail);
 const char* IrOprand_print(IrOprand* op);
 
 extern IrCode* ircode_list;
@@ -82,5 +82,10 @@ extern int compst_num;
 
 int tmpvar_new();
 int label_new();
+
+void ircode_opt(IrCode* tail);
+void ircode_opt_useless(IrCode* tail);
+void ircode_opt_address(IrCode* tail);
+void ircode_opt_eval(IrCode* tail);
 
 #endif

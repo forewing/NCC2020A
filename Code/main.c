@@ -22,8 +22,13 @@ int main(int argc, char** argv) {
     yyparse();
     // print_syntax_tree();
     symtab_build();
-    while (ircode_list->prev)
-        ircode_list = ircode_list->prev;
+
+    if (bug_number > 0) {
+        fprintf(stderr, "Unable to translate\n");
+        return -1;
+    }
+
+    ircode_opt(ircode_list);
 
     if (argc > 2) {
         FILE* fp = fopen(argv[2], "w");
