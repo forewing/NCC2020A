@@ -209,7 +209,7 @@ void ircode_opt(IrCode* tail) {
     tmpvar_ptr_list_2 = (void**)malloc(sizeof(void*) * tmpvar_num);
     ircode_opt_zero_tmp(tail);
     ircode_opt_exist_once(tail);
-    // ircode_opt_assign_once(tail);
+    ircode_opt_assign_once(tail);
     ircode_opt_address(tail);
     ircode_opt_eval(tail);
 }
@@ -296,7 +296,6 @@ void ircode_opt_assign_once(IrCode* tail) {
         ptr = ptr->next;
     }
 
-    // TODO
     for (int i = 0; i < tmpvar_num; i++) {
         if (tmpvar_int_list[i] != 1 || !tmpvar_ptr_list[i])
             continue;
@@ -314,7 +313,7 @@ void ircode_opt_assign_once(IrCode* tail) {
                 if (!tmp[j])
                     continue;
                 IrOprand* op = tmp[j];
-                while (op->type == OP_GETADDR || op->type == OP_GETADDR)
+                while (op->type == OP_GETDATA || op->type == OP_GETADDR)
                     op = op->data_op;
                 if (op->type == OP_TEMP && op->data_int == i)
                     memcpy(op, tmpvar_ptr_list[i], sizeof(IrOprand));
