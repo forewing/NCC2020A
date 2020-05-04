@@ -1,13 +1,13 @@
 #include "symbol.h"
 
 const SymNode int_entity =
-    {.data_int = 0, "CONST_INT_ENTITY", 0, TYPE_INT, 1, 0};
+    {.data_int = 0, "CONST_INT_ENTITY", 0, 4, TYPE_INT, 1, 0};
 const SymNode float_entity =
-    {.data_float = 0.0, "CONST_FLOAT_ENTITY", 0, TYPE_FLOAT, 1, 0};
+    {.data_float = 0.0, "CONST_FLOAT_ENTITY", 0, 4, TYPE_FLOAT, 1, 0};
 const SymNode void_entity =
-    {.data_struct = {NULL, 0}, "CONST_VOID_ENTITY", 0, TYPE_STRUCT, 1, 0};
+    {.data_struct = {NULL, 0}, "CONST_VOID_ENTITY", 0, 0, TYPE_STRUCT, 1, 0};
 const SymNode invalid_entity =
-    {.data_int = 0, "CONST_INVALID_ENTITY", 0, TYPE_INVALID, 0, 0};
+    {.data_int = 0, "CONST_INVALID_ENTITY", 0, 4, TYPE_INVALID, 0, 0};
 
 int typeEqual(const SymNode* a, const SymNode* b) {
     if (!a || !b)
@@ -42,9 +42,11 @@ SymNode* type_new() {
     SymNode* ret = (SymNode*)malloc(sizeof(SymNode));
     ret->name = NULL;
     ret->offset = 0;
+    ret->size = 0;
     ret->type = TYPE_INVALID;
     ret->is_right = 0;
     ret->line = 0;
+    ret->is_param = 0;
     return ret;
 }
 
@@ -57,6 +59,7 @@ SymNode* type_new_invalid() {
 SymNode* type_new_int(int value) {
     SymNode* ret = type_new();
     ret->type = TYPE_INT;
+    ret->size = 4;
     ret->data_int = value;
     return ret;
 }
@@ -64,6 +67,7 @@ SymNode* type_new_int(int value) {
 SymNode* type_new_float(float value) {
     SymNode* ret = type_new();
     ret->type = TYPE_FLOAT;
+    ret->size = 4;
     ret->data_float = value;
     return ret;
 }

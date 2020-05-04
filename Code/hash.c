@@ -3,7 +3,7 @@
 unsigned int hash(const char* str) {
     unsigned int hash = 5381;
     int c;
-    while (c = *str++)
+    while ((c = *str++))
         hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
     return hash % HASH_SIZE;
 }
@@ -25,8 +25,8 @@ void hashmap_free(HashMap* map) {
     //         HASHNODE_FREE(tmp);
     //     }
     // }
-    if (map->nodes)
-        free(map->nodes);
+    // if (map->nodes != NULL)
+    // free(map->nodes);
 }
 
 int hashmap_insert(HashMap* map, const char* key, SymNode* data) {

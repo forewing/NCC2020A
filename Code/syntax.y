@@ -104,8 +104,8 @@ OptTag : ID         {SYN_REGISTE(OptTag, $$, @$, $1)}
 Tag : ID    {SYN_REGISTE(Tag, $$, @$, $1)}
     ;
 
-VarDec : ID             {SYN_REGISTE(VarDec, $$, @$, $1)}
-    | VarDec LB INT RB  {SYN_REGISTE(VarDec, $$, @$, $1, $2, $3, $4)}
+VarDec : ID             {SYN_REGISTE(VarDec, $$, @$, $1) $$->data_int = 0;}
+    | VarDec LB INT RB  {SYN_REGISTE(VarDec, $$, @$, $1, $2, $3, $4) $$->data_int = $1->data_int + 1;}
     | error LB INT RB       /* ERROR! */
     | VarDec LB error       /* ERROR! */
     ;

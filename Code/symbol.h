@@ -35,9 +35,11 @@ typedef struct SymNode {
     };
     const char* name;
     int offset;
+    int size;
     int type;
     int is_right;
     int line;
+    int is_param;
 } SymNode;
 
 int typeEqual(const SymNode* a, const SymNode* b);

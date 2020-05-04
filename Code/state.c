@@ -1,12 +1,28 @@
 #include "state.h"
 
+#include "helper.h"
+#include "ir.h"
 #include "symbol.h"
 #include "symtab.h"
 #include "tree.h"
 
-void symbol_error(int type, int lineno, const char* msg, const char* name) {
-    fprintf(stderr, "Error type %d at Line %d: %s%s.\n", type, lineno, msg,
-            name);
+// void symbol_error(int type, int lineno, const char* msg, const char* name) {
+//     bug_number++;
+//     fprintf(stderr, "Error type %d at Line %d: %s%s.\n", type, lineno, msg,
+//             name);
+// }
+
+typedef struct ExpRet_t {
+    SymNode* node;
+    int addr;
+} ExpRet_t;
+ExpRet_t ExpRet_val(SymNode* node) {
+    ExpRet_t ret = {.node = node, .addr = -1};
+    return ret;
+}
+ExpRet_t ExpRet_addr(SymNode* node, int addr_tmp) {
+    ExpRet_t ret = {.node = node, .addr = addr_tmp};
+    return ret;
 }
 
 #define CHILD(__ID__) root->children[__ID__]
@@ -19,6 +35,16 @@ void symbol_error(int type, int lineno, const char* msg, const char* name) {
 #define rch6 CHILD(6)
 #define rsz root->size
 #define rln root->lineno
+
+void CODE_INSERT(int type, int data, IrOprand* x, IrOprand* y, IrOprand* z) {
+    IrCode_insert(ircode_list, IrCode_new(type, data, x, y, z));
+}
+
+void struct_size_calc(SymNode* elem) {
+    for (int i = 0; i < elem->data_struct.size; i++) {
+        elem->size += elem->data_struct.types[i]->size;
+    }
+}
 
 void state_Program(TreeNode* root);
 void state_ExtDefList(TreeNode* root);
@@ -39,8 +65,9 @@ void state_DefList(TreeNode* root, SymNode** type_pos);
 void state_Def(TreeNode* root, SymNode** type_pos);
 void state_DecList(TreeNode* root, SymNode* type, SymNode** type_pos);
 void state_Dec(TreeNode* root, SymNode* type, SymNode** type_pos);
-SymNode* state_Exp(TreeNode* root);
-void state_Args(TreeNode* root, SymNode** type_pos);
+ExpRet_t state_Exp(TreeNode* root, int target);
+void state_Cond(TreeNode* root, int label_true, int label_false);
+void state_Args(TreeNode* root, SymNode** type_pos, int* tmp_pos);
 
 void symtab_build() {
     if (bug_number != 0)
@@ -48,23 +75,29 @@ void symtab_build() {
     struct_table = hashmap_new();
     symtab = hashmap_new();
     symtab_root = symtab;
+
+    ircode_list = IrCode_new(CODE_NOP, 0, NULL, NULL, NULL);
+
     state_Program(tree_root);
 }
 
 void state_Program(TreeNode* root) {
-    state_ExtDefList(rch0);
+    SymNode* func_write =
+        type_new_func(type_dup_right(&int_entity), type_new_struct(1));
+    func_write->name = "write";
+    func_write->is_right = 1;
+    func_write->data_func.args->size = 4;
+    func_write->data_func.args->data_struct.types[0] =
+        type_dup_right(&int_entity);
+    symtab_insert_root("write", func_write);
 
-    for (int i = 0; i < HASH_SIZE; i++) {
-        HashNode* ptr = symtab->nodes[i];
-        while (ptr) {
-            SymNode* func = ptr->data;
-            if (func->type == TYPE_FUNC && !func->is_right) {
-                symbol_error(18, func->line,
-                             "undefined function: ", func->name);
-            }
-            ptr = ptr->next;
-        }
-    }
+    SymNode* func_read = type_new_func(type_dup_right(&int_entity),
+                                       type_dup_right(&void_entity));
+    func_read->name = "read";
+    func_read->is_right = 1;
+    symtab_insert_root("read", func_read);
+
+    state_ExtDefList(rch0);
 }
 
 void state_ExtDefList(TreeNode* root) {
@@ -84,31 +117,26 @@ void state_ExtDef(TreeNode* root) {
         return;
     }
     if (rch1->state_type == STATE_ExtDecList) {
-        // Specifier ExtDecList SEMI
-        state_ExtDecList(rch1, spec);
+        // Global variable not allowed
+        bug_number++;
         return;
+
+        // Specifier ExtDecList SEMI
+        // state_ExtDecList(rch1, spec);
+        // return;
     }
 
     SymNode* func = state_FunDec(rch1, spec);
     func->line = rch1->lineno;
-    HashNode* pre = symtab_place_now(func->name);
-    if (pre) {
-        func->is_right = pre->data->is_right;
-        if (!typeEqual(func, pre->data)) {
-            symbol_error(19, rln,
-                         "inconsistent declaration of function: ", func->name);
-        }
-        pre->data = func;
-    } else {
-        symtab_insert_now(func->name, func);
-    }
+    symtab_insert_now(func->name, func);
+
     if (rch2->state_type == STATE_CompSt) {
         // Specifier FunDec CompSt
+
+        CODE_INSERT(CODE_FUNC, 0, IrOprand_new_str(OP_FUNC, func->name), NULL,
+                    NULL);
+
         state_CompSt(rch2, func->data_func.ret, func->data_func.args);
-        if (func->is_right) {
-            symbol_error(4, rln, "duplicated define of function: ", func->name);
-        }
-        func->is_right = 1;
     }
 }
 
@@ -116,19 +144,7 @@ void state_ExtDecList(TreeNode* root, SymNode* type) {
     // VarDec
 
     SymNode* node = state_VarDec(rch0, type_dup_left(type));
-
-    if (symtab_lookup_now(node->name)) {
-        // Conflict
-        symbol_error(3, rln, "redefined variable: ", node->name);
-    } else {
-        SymNode* global = symtab_lookup(struct_table, node->name);
-        if (global) {
-            // Conflict with global struct name
-            symbol_error(3, rln, "variable name conflict with struct name: ",
-                         node->name);
-        }
-        symtab_insert_now(node->name, node);
-    }
+    symtab_insert_now(node->name, node);
 
     if (rsz == 3) {
         // VarDec COMMA ExtDecList
@@ -146,6 +162,7 @@ SymNode* state_Specifier(TreeNode* root) {
                 return type_new_int(0);
                 break;
             case TYPENAME_FLOAT:
+                bug_number++;
                 return type_new_float(0.0);
                 break;
             default:
@@ -162,10 +179,6 @@ SymNode* state_StructSpecifier(TreeNode* root) {
         // STRUCT Tag
         const char* name = state_Tag(rch1);
         SymNode* type = symtab_lookup(struct_table, name);
-        if (!type) {
-            symbol_error(17, rln, "struct not defined: ", name);
-            return type_new_invalid();
-        }
         return type;
     }
     // STRUCT OptTag LC DefList RC
@@ -180,18 +193,12 @@ SymNode* state_StructSpecifier(TreeNode* root) {
     state_DefList(rch3, type->data_struct.types);
     symtab_pop();
 
+    struct_size_calc(type);
+
     const char* name = state_OptTag(rch1);
     if (name) {
-        SymNode* pre = symtab_lookup(struct_table, name);
-        if (pre) {
-            symbol_error(16, rln, "struct name duplicated: ", name);
-        } else {
-            SymNode* entity = type_dup_right(type);
-            symtab_insert(struct_table, name, entity);
-        }
-        if (symtab_lookup_root(name)) {
-            symbol_error(16, rln, "struct name duplicated: ", name);
-        }
+        SymNode* entity = type_dup_right(type);
+        symtab_insert(struct_table, name, entity);
     }
 
     return type;
@@ -219,16 +226,34 @@ SymNode* state_VarDec(TreeNode* root, SymNode* type) {
         return type;
     } else {
         // VarDec LB INT RB
-        SymNode* pre = state_VarDec(rch0, type);
-        SymNode* ret = type_new_array(pre);
-        ret->data_array.size = rch2->data_int;
-        ret->name = pre->name;
-        if (pre->type == TYPE_ARRAY) {
-            ret->data_array.dimen = pre->data_array.dimen + 1;
-        } else {
-            ret->data_array.dimen = 1;
+
+        // root->data_int stores the array dimen
+        // a[5][4][3] for [3, 4, 5]
+        int* sizes = (int*)malloc(root->data_int * sizeof(int));
+
+        // Find the size of each dimen
+        TreeNode* elem = root;
+        for (int i = 0; i < root->data_int; i++) {
+            sizes[i] = elem->children[2]->data_int;
+            elem = elem->children[0];
         }
-        return ret;
+
+        // elem is now VarDec -> ID
+        SymNode* dimen = type_dup_left(type);
+        dimen->name = elem->children[0]->data_str;
+
+        for (int i = 0; i < root->data_int; i++) {
+            SymNode* dimen_new = type_new_array(dimen);
+            dimen_new->data_array.dimen = i + 1;
+            dimen_new->data_array.size = sizes[i];
+            dimen_new->name = dimen->name;
+            dimen_new->size = dimen->size * sizes[i];
+            dimen = dimen_new;
+        }
+
+        free(sizes);
+
+        return dimen;
     }
 }
 
@@ -241,6 +266,9 @@ SymNode* state_FunDec(TreeNode* root, SymNode* type) {
         symtab_push();
         state_VarList(rch2, args->data_struct.types);
         symtab_pop();
+
+        struct_size_calc(args);
+
     } else {
         // ID LP RP
         args = type_dup_left(&void_entity);
@@ -254,17 +282,7 @@ SymNode* state_FunDec(TreeNode* root, SymNode* type) {
 void state_VarList(TreeNode* root, SymNode** type_pos) {
     // ParamDec
     SymNode* arg = state_ParamDec(rch0);
-    if (symtab_lookup_now(arg->name)) {
-        symbol_error(3, rln, "parameter name redefined: ", arg->name);
-    } else {
-        symtab_insert_now(arg->name, arg);
-    }
-
-    SymNode* global = symtab_lookup(struct_table, arg->name);
-    if (global) {
-        symbol_error(3, rln, "parameter name duplicated with global struct: ",
-                     arg->name);
-    }
+    symtab_insert_now(arg->name, arg);
 
     *type_pos = arg;
 
@@ -287,13 +305,14 @@ void state_CompSt(TreeNode* root, SymNode* ret, SymNode* args) {
         // Spray args
         for (int i = 0; i < args->data_struct.size; i++) {
             const char* name = args->data_struct.types[i]->name;
-            SymNode* pre = symtab_lookup(struct_table, name);
-            if (pre) {
-                symbol_error(
-                    3, rln,
-                    "parameter name duplicated with global struct: ", name);
-            }
-            symtab_insert_now(name, args->data_struct.types[i]);
+
+            CODE_INSERT(CODE_PARAM, 0, OP_NEW_VAR(name), NULL, NULL);
+
+            // Set param flag
+            SymNode* arg = type_dup_left(args->data_struct.types[i]);
+            arg->is_param = 1;
+
+            symtab_insert_now(name, arg);
         }
     }
 
@@ -317,28 +336,67 @@ void state_Stmt(TreeNode* root, SymNode* ret) {
     if (rsz == 1) {
         // CompSt
         state_CompSt(rch0, ret, NULL);
+
     } else if (rsz == 2) {
         // Exp SEMI
-        state_Exp(rch0);
+        state_Exp(rch0, 0);
+
     } else if (rsz == 3) {
         // RETURN Exp SEMI
-        SymNode* exp = state_Exp(rch1);
-        if (!typeEqual(exp, ret)) {
-            symbol_error(8, rln, "return type mismatch", "");
-        }
-    } else {
-        // IF    LP Exp RP Stmt
-        // IF    LP Exp RP Stmt ELSE Stmt
+        int target = tmpvar_new();
+        ExpRet_t exp = state_Exp(rch1, target);
+        CODE_INSERT(CODE_RET, 0, OP_NEW_TEMP(target), NULL, NULL);
+
+    } else if (rch0->state_type == STATE_WHILE) {
         // WHILE LP Exp RP Stmt
-        SymNode* exp = state_Exp(rch2);
-        if (!typeEqual(exp, &int_entity)) {
-            symbol_error(7, root->lineno, "condition must be int", "");
-        }
+        int label1 = label_new();
+        int label2 = label_new();
+        int label3 = label_new();
+
+        CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label1), NULL, NULL);
+
+        state_Cond(rch2, label2, label3);
+
+        CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label2), NULL, NULL);
+
         state_Stmt(rch4, ret);
-        if (root->size == 7) {
-            // IF    LP Exp RP Stmt ELSE Stmt
-            state_Stmt(rch6, ret);
-        }
+
+        CODE_INSERT(CODE_GOTO, 0, OP_NEW_LABEL(label1), NULL, NULL);
+
+        CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label3), NULL, NULL);
+
+    } else if (rsz == 5) {
+        // IF    LP Exp RP Stmt
+        int label1 = label_new();
+        int label2 = label_new();
+
+        state_Cond(rch2, label1, label2);
+
+        CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label1), NULL, NULL);
+
+        state_Stmt(rch4, ret);
+
+        CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label2), NULL, NULL);
+
+    } else {
+        // IF    LP Exp RP Stmt ELSE Stmt
+        int label1 = label_new();
+        int label2 = label_new();
+        int label3 = label_new();
+
+        state_Cond(rch2, label1, label2);
+
+        CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label1), NULL, NULL);
+
+        state_Stmt(rch4, ret);
+
+        CODE_INSERT(CODE_GOTO, 0, OP_NEW_LABEL(label3), NULL, NULL);
+
+        CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label2), NULL, NULL);
+
+        state_Stmt(rch6, ret);
+
+        CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label3), NULL, NULL);
     }
 }
 
@@ -378,244 +436,327 @@ void state_Dec(TreeNode* root, SymNode* type, SymNode** type_pos) {
     // type already duped
     SymNode* node = state_VarDec(rch0, type);
 
+    // printf("%s: %d\n", node->name, node->size);
+
     // Insert
-    if (symtab_lookup_now(node->name)) {
-        // Conflict in current
-        if (type_pos) {
-            // In struct
-            symbol_error(15, rln, "duplicated struct member: ", node->name);
-        } else {
-            // Variable
-            symbol_error(3, rln, "redefined variable: ", node->name);
-        }
-    } else {
-        SymNode* global = symtab_lookup(struct_table, node->name);
-        if (!type_pos && global && global->type == TYPE_STRUCT) {
-            // Variable conflict with global struct
-            symbol_error(
-                3, rln,
-                "variable name conflict with global struct name: ", node->name);
-        }
-        symtab_insert_now(node->name, node);
-    }
+
+    symtab_insert_now(node->name, node);
+
     if (type_pos) {
+        // Struct
         *type_pos = node;
+    } else {
+        // Normal Dec
+        if (node->type == TYPE_STRUCT || node->type == TYPE_ARRAY)
+            CODE_INSERT(CODE_DEC, node->size, OP_NEW_VAR(node->name), NULL,
+                        NULL);
     }
 
     // VarDec
     if (root->size == 3) {
         // VarDec ASSIGNOP Exp
-        if (type_pos) {
-            // In struct
-            symbol_error(15, rln, "init struct member: ", node->name);
-        } else if (node->type == TYPE_ARRAY) {
-            // Is array
-            symbol_error(5, rln, "init array: ", node->name);
-        } else {
-            SymNode* exp = state_Exp(rch2);
-            if (!typeEqual(node, exp))
-                symbol_error(5, rln, "conflict init type: ", node->name);
-        }
+
+        int target = tmpvar_new();
+        state_Exp(rch2, target);
+
+        CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_VAR(node->name), OP_NEW_TEMP(target),
+                    NULL);
     }
 }
 
-SymNode* state_Exp(TreeNode* root) {
+ExpRet_t state_Exp(TreeNode* root, int target) {
+    // Must return in conditions
+
     if (rch0->state_type == STATE_INT) {
         // INT
         SymNode* type = type_new_int(rch0->data_int);
         type->is_right = 1;
-        return type;
+
+        CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(target),
+                    OP_NEW_CONST(rch0->data_int), NULL);
+
+        return ExpRet_val(type);
     } else if (rch0->state_type == STATE_FLOAT) {
+        // NO FLOAT CONST ALLOWED
+        bug_number++;
+
         // FLOAT
         SymNode* type = type_new_float(rch0->data_float);
         type->is_right = 1;
-        return type;
+        return ExpRet_val(type);
     }
 
     if (rch0->state_type == STATE_ID) {
         SymNode* id = symtab_lookup_all(rch0->data_str);
         if (rsz == 1) {
             // ID
-            if (!id) {
-                symbol_error(1, rln, "undefined variable: ", rch0->data_str);
-                return type_new_invalid();
+            int addr_tmp = tmpvar_new();
+
+            if (id->is_param &&
+                (id->type == TYPE_ARRAY || id->type == TYPE_STRUCT)) {
+                CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(addr_tmp),
+                            OP_NEW_VAR(rch0->data_str), NULL);
+            } else {
+                CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(target),
+                            OP_NEW_VAR(rch0->data_str), NULL);
+
+                CODE_INSERT(CODE_GETADDR, 0, OP_NEW_TEMP(addr_tmp),
+                            OP_NEW_VAR(rch0->data_str), NULL);
             }
-            return id;
+
+            return ExpRet_addr(id, addr_tmp);
         }
         // ID LP Args RP
         // ID LP RP
-        if (!id) {
-            symbol_error(2, rln, "undefined function: ", rch0->data_str);
-            return type_new_invalid();
-        }
-        if (id->type == TYPE_INVALID) {
-            return id;
-        }
-        if (id->type != TYPE_FUNC) {
-            symbol_error(11, rln, "variable is not callable: ", id->name);
-            return type_new_invalid();
-        }
+
         if (rsz == 3) {
             // ID LP RP
-            if (!typeEqual(&void_entity, id->data_func.args)) {
-                symbol_error(9, rln, "arguments mismatch: ", id->name);
+
+            if (!strcmp("read", rch0->data_str)) {
+                CODE_INSERT(CODE_READ, 0, OP_NEW_TEMP(target), NULL, NULL);
+            } else {
+                CODE_INSERT(CODE_CALL, 0, OP_NEW_TEMP(target),
+                            IrOprand_new_str(OP_FUNC, rch0->data_str), NULL);
             }
-            return type_dup_right(id->data_func.ret);
+
+            return ExpRet_val(type_dup_right(id->data_func.ret));
         } else {
             // ID LP Args RP
-            if (rch2->data_int == id->data_func.args->data_struct.size) {
-                SymNode* args = type_new_struct(rch2->data_int);
-                state_Args(rch2, args->data_struct.types);
-                if (typeEqual(args, id->data_func.args)) {
-                    // Only success here
-                    return type_dup_right(id->data_func.ret);
+
+            SymNode* args = type_new_struct(rch2->data_int);
+
+            int* tmp_pos = (int*)malloc(sizeof(int) * rch2->data_int);
+            state_Args(rch2, args->data_struct.types, tmp_pos);
+
+            if (!strcmp("write", rch0->data_str)) {
+                CODE_INSERT(CODE_WRITE, 0, OP_NEW_TEMP(tmp_pos[0]), NULL, NULL);
+                CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(target),
+                            OP_NEW_CONST(0), NULL);
+            } else {
+                for (int i = args->data_struct.size - 1; i >= 0; i--) {
+                    CODE_INSERT(CODE_ARG, 0, OP_NEW_TEMP(tmp_pos[i]), NULL,
+                                NULL);
                 }
+
+                free(tmp_pos);
+
+                CODE_INSERT(CODE_CALL, 0, OP_NEW_TEMP(target),
+                            IrOprand_new_str(OP_FUNC, rch0->data_str), NULL);
             }
-            // Fail here
-            symbol_error(9, rln, "arguments mismatch: ", id->name);
-            return type_new_invalid();
+
+            return ExpRet_val(type_dup_right(id->data_func.ret));
         }
     }
 
     if (rch0->state_type == STATE_LP) {
         // LP Exp RP
-        return state_Exp(rch1);
+        // No code, just pass
+        return state_Exp(rch1, target);
     }
 
+    if (rch0->state_type == STATE_NOT || rch1->state_type == STATE_RELOP ||
+        rch1->state_type == STATE_AND || rch1->state_type == STATE_OR) {
+        // NOT, RELOP, AND, OR
+
+        int label1 = label_new();
+        int label2 = label_new();
+
+        CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(target), OP_NEW_CONST(0), NULL);
+
+        state_Cond(root, label1, label2);
+
+        CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label1), NULL, NULL);
+
+        CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(target), OP_NEW_CONST(1), NULL);
+
+        CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label2), NULL, NULL);
+
+        return ExpRet_val(type_new_int(0));
+    }
+
+    int tmp_1 = tmpvar_new();
+    int tmp_2 = tmpvar_new();
+
     // if (rsz == )
-    SymNode* exp1 = NULL;
+    ExpRet_t exp1;
     if (rch0->state_type == STATE_Exp) {
         // others
-        exp1 = state_Exp(rch0);
+        exp1 = state_Exp(rch0, tmp_1);
     } else {
         // MINUS Exp
         // NOT Exp
-        exp1 = state_Exp(rch1);
+        exp1 = state_Exp(rch1, tmp_1);
     }
 
-    SymNode* exp2 = NULL;
+    ExpRet_t exp2;
     if (rsz >= 3 && rch2->state_type == STATE_Exp) {
-        exp2 = state_Exp(rch2);
+        exp2 = state_Exp(rch2, tmp_2);
     }
 
-    if (exp1->type == TYPE_INVALID) {
-        return type_new_invalid();
-    }
-    if (exp2 && exp2->type == TYPE_INVALID) {
-        return type_new_invalid();
-    }
-
-    if (rsz == 2) {
+    if (rch0->state_type == STATE_MINUS || rch1->state_type == STATE_PLUS ||
+        rch1->state_type == STATE_MINUS || rch1->state_type == STATE_STAR ||
+        rch1->state_type == STATE_DIV) {
+        // NEG, PLUS, MINUS, STAR, DIV
+        int code_type = CODE_ASSIGN;
+        IrOprand *op_left = NULL, *op_right = NULL;
         if (rch0->state_type == STATE_MINUS) {
-            // MINUS Exp
-            if (!typeEqual(exp1, &int_entity) &&
-                !typeEqual(exp1, &float_entity)) {
-                symbol_error(7, rln,
-                             "can't do arithmetic operation on types except "
-                             "int and float",
-                             "");
-                return type_new_invalid();
-            }
+            code_type = CODE_SUB;
+            op_left = OP_NEW_CONST(0);
+            op_right = OP_NEW_TEMP(tmp_1);
         } else {
-            // NOT Exp
-            if (!typeEqual(exp1, &int_entity)) {
-                symbol_error(
-                    7, rln, "can't do logic operation on types except int", "");
-                return type_new_invalid();
-            }
+            op_left = OP_NEW_TEMP(tmp_1);
+            op_right = OP_NEW_TEMP(tmp_2);
+            if (rch1->state_type == STATE_PLUS)
+                code_type = CODE_ADD;
+            else if (rch1->state_type == STATE_MINUS)
+                code_type = CODE_SUB;
+            else if (rch1->state_type == STATE_STAR)
+                code_type = CODE_MUL;
+            else if (rch1->state_type == STATE_DIV)
+                code_type = CODE_DIV;
         }
-        return type_dup_right(exp1);
+        CODE_INSERT(code_type, 0, OP_NEW_TEMP(target), op_left, op_right);
+        return ExpRet_val(type_dup_left(exp1.node));
     }
 
     if (rch1->state_type == STATE_DOT) {
         // Exp DOT ID
-        if (exp1->type != TYPE_STRUCT) {
-            symbol_error(13, rln, "variable not a struct", "");
-            return type_new_invalid();
-        }
+        int offset = 0;
+
         SymNode* ret = NULL;
-        for (int i = 0; i < exp1->data_struct.size; i++) {
-            if (!strcmp(exp1->data_struct.types[i]->name, rch2->data_str)) {
-                ret = exp1->data_struct.types[i];
+        for (int i = 0; i < exp1.node->data_struct.size; i++) {
+            SymNode* ptr = exp1.node->data_struct.types[i];
+            if (!strcmp(ptr->name, rch2->data_str)) {
+                ret = ptr;
                 break;
+            } else {
+                offset += ptr->size;
             }
         }
-        if (!ret) {
-            symbol_error(14, rln, "unknown field: ", rch2->data_str);
-            return type_new_invalid();
-        }
-        return ret;
-    } else if (rsz == 4) {
-        // Exp LB Exp RB
-        if (exp1->type != TYPE_ARRAY) {
-            symbol_error(10, rln, "indexing non-array variable", "");
-            return type_new_invalid();
-        }
-        if (!typeEqual(exp2, &int_entity)) {
-            symbol_error(12, rln, "index is not int", "");
-        }
-        return exp1->data_array.next;
+
+        int tmp_addr = tmpvar_new();
+        CODE_INSERT(CODE_ADD, 0, OP_NEW_TEMP(tmp_addr), OP_NEW_TEMP(exp1.addr),
+                    OP_NEW_CONST(offset));
+
+        CODE_INSERT(CODE_GETDATA, 0, OP_NEW_TEMP(target), OP_NEW_TEMP(tmp_addr),
+                    NULL);
+
+        return ExpRet_addr(ret, tmp_addr);
     }
 
-    switch (rch1->state_type) {
-        case STATE_ASSIGNOP:
-            // Exp ASSIGNOP Exp
-            if (!typeEqual(exp1, exp2)) {
-                symbol_error(5, rln, "assign between different types", "");
-                return type_new_invalid();
-            }
-            if (exp1->is_right) {
-                symbol_error(6, rln, "right value can't be assigned", "");
-                return type_new_invalid();
-            }
-            return exp1;
-            break;
-        case STATE_AND:
-        case STATE_OR:
-            // Exp AND Exp
-            // Exp OR Exp
-            if (!typeEqual(exp1, &int_entity) ||
-                !typeEqual(exp2, &int_entity)) {
-                symbol_error(
-                    7, rln, "can't do logic operation on types except int", "");
-                return type_new_invalid();
-            }
-            return type_dup_right(exp1);
-            break;
-        case STATE_RELOP:
-        case STATE_PLUS:
-        case STATE_MINUS:
-        case STATE_STAR:
-        case STATE_DIV:
-            // Exp RELOP Exp
-            // Exp PLUS Exp
-            // Exp MINUS Exp
-            // Exp STAR Exp
-            // Exp DIV Exp
-            if (!typeEqual(exp1, exp2)) {
-                symbol_error(7, rln,
-                             "cant't do operation between different types", "");
-                return type_new_invalid();
-            }
-            if (!typeEqual(exp1, &int_entity) &&
-                !typeEqual(exp1, &float_entity)) {
-                symbol_error(7, rln,
-                             "cant't do arithmetic operation on types "
-                             "except int and float",
-                             "");
-                return type_new_invalid();
-            }
-            return type_dup_right(exp1);
-            break;
+    if (rch1->state_type == STATE_LB) {
+        // Exp LB Exp RB
+
+        int tmp_addr = tmpvar_new();
+        CODE_INSERT(CODE_MUL, 0, OP_NEW_TEMP(tmp_addr), OP_NEW_TEMP(tmp_2),
+                    OP_NEW_CONST(exp1.node->data_array.next->size));
+
+        CODE_INSERT(CODE_ADD, 0, OP_NEW_TEMP(tmp_addr), OP_NEW_TEMP(tmp_addr),
+                    OP_NEW_TEMP(exp1.addr));
+
+        CODE_INSERT(CODE_GETDATA, 0, OP_NEW_TEMP(target), OP_NEW_TEMP(tmp_addr),
+                    NULL);
+
+        return ExpRet_addr(exp1.node->data_array.next, tmp_addr);
     }
-    return type_new_invalid();
+
+    if (rch1->state_type == STATE_ASSIGNOP) {
+        // Exp ASSIGNOP Exp
+
+        if (exp1.addr == -1) {
+            // Must be variable
+            CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_VAR(exp1.node->name),
+                        OP_NEW_TEMP(tmp_2), NULL);
+        } else {
+            // Addr
+            CODE_INSERT(CODE_SETDATA, 0, OP_NEW_TEMP(exp1.addr),
+                        OP_NEW_TEMP(tmp_2), NULL);
+        }
+
+        CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(target), OP_NEW_TEMP(tmp_2),
+                    NULL);
+
+        return ExpRet_val(exp1.node);
+    }
+
+    CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(target), OP_NEW_CONST(-1), NULL);
+    return ExpRet_addr(type_new_invalid(), -1);
 }
 
-void state_Args(TreeNode* root, SymNode** type_pos) {
+void state_Cond(TreeNode* root, int label_true, int label_false) {
+    // Must return in condition once match
+    if (rsz == 2 && rch0->state_type == STATE_NOT) {
+        // NOT Exp
+
+        state_Cond(rch1, label_false, label_true);
+
+        return;
+    } else if (rsz == 3) {
+        if (rch1->state_type == STATE_RELOP) {
+            // Exp1 RELOP Exp2
+
+            int tmp1 = tmpvar_new();
+            int tmp2 = tmpvar_new();
+
+            state_Exp(rch0, tmp1);
+            state_Exp(rch2, tmp2);
+
+            CODE_INSERT(CODE_GOCOND, rch1->data_int, OP_NEW_TEMP(tmp1),
+                        OP_NEW_TEMP(tmp2), OP_NEW_LABEL(label_true));
+
+            CODE_INSERT(CODE_GOTO, 0, OP_NEW_LABEL(label_false), NULL, NULL);
+
+            return;
+        } else if (rch1->state_type == STATE_AND) {
+            // Exp1 and Exp2
+
+            int label1 = label_new();
+
+            state_Cond(rch0, label1, label_false);
+            CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label1), NULL, NULL);
+
+            state_Cond(rch2, label_true, label_false);
+
+            return;
+        } else if (rch1->state_type == STATE_OR) {
+            // Exp1 or Exp2
+
+            int label1 = label_new();
+
+            state_Cond(rch0, label_true, label1);
+            CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label1), NULL, NULL);
+
+            state_Cond(rch2, label_true, label_false);
+
+            return;
+        }
+
+        // Fall to others
+    }
+
+    // Others
+
+    int tmp1 = tmpvar_new();
+    state_Exp(root, tmp1);
+    CODE_INSERT(CODE_GOCOND, RELOP_NE, OP_NEW_TEMP(tmp1), OP_NEW_CONST(0),
+                OP_NEW_LABEL(label_true));
+
+    CODE_INSERT(CODE_GOTO, 0, OP_NEW_LABEL(label_false), NULL, NULL);
+
+    return;
+}
+
+void state_Args(TreeNode* root, SymNode** type_pos, int* tmp_pos) {
     // Exp
-    *type_pos = state_Exp(rch0);
+    *tmp_pos = tmpvar_new();
+    ExpRet_t exp = state_Exp(rch0, *tmp_pos);
+    *type_pos = exp.node;
+    if (exp.node->type == TYPE_STRUCT || exp.node->type == TYPE_ARRAY) {
+        *tmp_pos = exp.addr;
+    }
+    // *type_pos = state_Exp(rch0, *tmp_pos).node;
     if (rsz == 3) {
         // Exp COMMA Args
-        state_Args(rch2, type_pos + 1);
+        state_Args(rch2, type_pos + 1, tmp_pos + 1);
     }
 }

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "ir.h"
 #include "state.h"
 #include "syntax.tab.h"
 #include "tree.h"
@@ -21,5 +22,19 @@ int main(int argc, char** argv) {
     yyparse();
     // print_syntax_tree();
     symtab_build();
+    while (ircode_list->prev)
+        ircode_list = ircode_list->prev;
+
+    if (argc > 2) {
+        FILE* fp = fopen(argv[2], "w");
+        if (!fp) {
+            perror(argv[2]);
+            return 1;
+        }
+        IrCode_print(fp, ircode_list);
+    } else {
+        IrCode_print(stdout, ircode_list);
+    }
+
     return 0;
 }

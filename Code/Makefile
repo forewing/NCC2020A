@@ -3,9 +3,10 @@
 
 # 编译器设定和编译选项
 CC = gcc
-FLEX = flex
-BISON = bison
+FLEX = /usr/local/opt/flex/bin/flex
+BISON = /usr/local/opt/bison/bin/bison
 CFLAGS = -std=c99
+LDFLAGS = -L/usr/local/opt/bison/lib -L/usr/local/opt/flex/lib
 
 # 编译目标：src目录下的所有.c文件
 CFILES = $(shell find ./ -name "*.c")
@@ -18,7 +19,7 @@ LFO = $(LFC:.c=.o)
 YFO = $(YFC:.c=.o)
 
 parser: syntax $(filter-out $(LFO),$(OBJS))
-	$(CC) -o parser $(filter-out $(LFO),$(OBJS)) -lfl -ly
+	$(CC) -o parser $(filter-out $(LFO),$(OBJS)) -lfl -ly $(LDFLAGS)
 
 syntax: lexical syntax-c
 	$(CC) -c $(YFC) -o $(YFO)
@@ -40,20 +41,22 @@ else
 	./parser ../Test/test1.cmm
 endif
 
-diff:
+gdb: syntax-c lexical
+	$(CC) -g -o parser-gdb $(filter-out $(LFC),$(CFILES)) -lfl -ly $(LDFLAGS)
+
+test:
 ifdef target
-	./parser ../Test/$(target).cmm 2>&1 | diff -Z -B - ../Test/$(target).ans
+	./parser ../Test/$(target).cmm
+else
+	./parser ../Test/test1.cmm
 endif
 
-gdb: syntax-c lexical
-	$(CC) -g -o parser-gdb $(filter-out $(LFC),$(CFILES)) -lfl -ly
+ir: parser
+	./parser ../Test/Lab3/$(target).cmm ../Test/Lab3/$(target).out
 
-lab1: parser
-	for i in `seq 1 10`; do echo "Testing Lab1/test$$i" && make -s diff target=Lab1/test$$i; done
-
-lab2: parser
-	for i in `seq 1 39`; do echo "Testing Lab2/$$i" && make -s diff target=Lab2/$$i; done
-
+irsim:
+	make ir target=$(target)
+	python ../NCC-irsim/irsim.py ../Test/Lab3/$(target).out
 
 clean:
 	rm -f parser lex.yy.c syntax.tab.c syntax.tab.h syntax.output parser-gdb
