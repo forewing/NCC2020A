@@ -499,7 +499,7 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
             } else {
                 // Put value and address
                 CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(target), OP_NEW_VAR(rch0->data_str), NULL);
-                CODE_INSERT(CODE_GETADDR, 0, OP_NEW_TEMP(addr_tmp), OP_NEW_VAR(rch0->data_str), NULL);
+                CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(addr_tmp), OP_NEW_GETADDR(rch0->data_str), NULL);
             }
 
             return ExpRet_addr(id, addr_tmp);
@@ -640,7 +640,7 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
         int tmp_addr = tmpvar_new();
         CODE_INSERT(CODE_ADD, 0, OP_NEW_TEMP(tmp_addr), OP_NEW_TEMP(exp1.addr), OP_NEW_CONST(offset));
 
-        CODE_INSERT(CODE_GETDATA, 0, OP_NEW_TEMP(target), OP_NEW_TEMP(tmp_addr), NULL);
+        CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(target), OP_NEW_GETDATA_T(tmp_addr), NULL);
 
         return ExpRet_addr(ret, tmp_addr);
     }
@@ -657,7 +657,7 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
 
         CODE_INSERT(CODE_ADD, 0, OP_NEW_TEMP(tmp_addr), OP_NEW_TEMP(tmp_addr), OP_NEW_TEMP(exp1.addr));
 
-        CODE_INSERT(CODE_GETDATA, 0, OP_NEW_TEMP(target), OP_NEW_TEMP(tmp_addr), NULL);
+        CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(target), OP_NEW_GETDATA_T(tmp_addr), NULL);
 
         return ExpRet_addr(exp1.node->data_array.next, tmp_addr);
     }
@@ -703,8 +703,8 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
             CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(test_label), NULL, NULL);
 
             CODE_INSERT(CODE_GOCOND, RELOP_LE, OP_NEW_TEMP(iter_tmp), OP_NEW_CONST(0), OP_NEW_LABEL(done_label));
-            CODE_INSERT(CODE_GETDATA, 0, OP_NEW_TEMP(swap_tmp), OP_NEW_TEMP(ptr2_tmp), NULL);
-            CODE_INSERT(CODE_SETDATA, 0, OP_NEW_TEMP(ptr1_tmp), OP_NEW_TEMP(swap_tmp), NULL);
+            CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(swap_tmp), OP_NEW_GETDATA_T(ptr2_tmp), NULL);
+            CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_GETDATA_T(ptr1_tmp), OP_NEW_TEMP(swap_tmp), NULL);
 
             CODE_INSERT(CODE_SUB, 0, OP_NEW_TEMP(iter_tmp), OP_NEW_TEMP(iter_tmp), OP_NEW_CONST(1));
             CODE_INSERT(CODE_ADD, 0, OP_NEW_TEMP(ptr1_tmp), OP_NEW_TEMP(ptr1_tmp), OP_NEW_CONST(4));
@@ -723,7 +723,7 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
                 CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_VAR(exp1.node->name), OP_NEW_TEMP(tmp_2), NULL);
             } else {
                 // Address
-                CODE_INSERT(CODE_SETDATA, 0, OP_NEW_TEMP(exp1.addr), OP_NEW_TEMP(tmp_2), NULL);
+                CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_GETDATA_T(exp1.addr), OP_NEW_TEMP(tmp_2), NULL);
             }
         }
 

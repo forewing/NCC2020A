@@ -144,15 +144,6 @@ void IrCode_print(FILE* fp, IrCode* tail) {
             case CODE_DIV:
                 fprintf(fp, "%s\t:=\t%s\t/\t%s\n", x, y, z);
                 break;
-            case CODE_GETADDR:
-                fprintf(fp, "%s\t:=\t&%s\n", x, y);
-                break;
-            case CODE_GETDATA:
-                fprintf(fp, "%s\t:=\t*%s\n", x, y);
-                break;
-            case CODE_SETDATA:
-                fprintf(fp, "*%s\t:=\t%s\n", x, y);
-                break;
             case CODE_GOTO:
                 fprintf(fp, "GOTO\t%s\n", x);
                 break;

@@ -29,9 +29,6 @@ enum CODE_TYPE {
     CODE_SUB,
     CODE_MUL,
     CODE_DIV,
-    CODE_GETADDR,
-    CODE_GETDATA,
-    CODE_SETDATA,
     CODE_GOTO,
     CODE_GOCOND,
     CODE_RET,
@@ -66,6 +63,9 @@ IrOprand* IrOprand_new_op(int type, IrOprand* data);
 #define OP_NEW_CONST(__CONST_VAL__) IrOprand_new_int(OP_CONST, __CONST_VAL__)
 #define OP_NEW_VAR(__VAR_NAME__) IrOprand_new_str(OP_VAR, __VAR_NAME__)
 #define OP_NEW_LABEL(__LABEL_ID__) IrOprand_new_int(OP_LABEL, __LABEL_ID__)
+#define OP_NEW_GETADDR(__VAR_ID__) IrOprand_new_op(OP_GETADDR, IrOprand_new_str(OP_VAR, __VAR_ID__))
+#define OP_NEW_GETDATA_T(__TMP_ID__) IrOprand_new_op(OP_GETDATA, IrOprand_new_int(OP_TEMP, __TMP_ID__))
+#define OP_NEW_GETDATA_V(__VAR_ID__) IrOprand_new_op(OP_GETDATA, IrOprand_new_str(OP_VAR, __VAR_ID__))
 
 IrCode* IrCode_new(int type, int data, IrOprand* x, IrOprand* y, IrOprand* z);
 
