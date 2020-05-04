@@ -41,20 +41,22 @@ else
 	./parser ../Test/test1.cmm
 endif
 
-diff:
-ifdef target
-	./parser ../Test/$(target).cmm 2>&1 | diff -Z -B - ../Test/$(target).ans
-endif
-
 gdb: syntax-c lexical
 	$(CC) -g -o parser-gdb $(filter-out $(LFC),$(CFILES)) -lfl -ly $(LDFLAGS)
 
-lab1: parser
-	for i in `seq 1 10`; do echo "Testing Lab1/test$$i" && make -s diff target=Lab1/test$$i; done
+test:
+ifdef target
+	./parser ../Test/$(target).cmm
+else
+	./parser ../Test/test1.cmm
+endif
 
-lab2: parser
-	for i in `seq 1 39`; do echo "Testing Lab2/$$i" && make -s diff target=Lab2/$$i; done
+ir: parser
+	./parser ../Test/Lab3/$(target).cmm ../Test/Lab3/$(target).out
 
+irsim:
+	make ir target=$(target)
+	python ../NCC-irsim/irsim.py ../Test/Lab3/$(target).out
 
 clean:
 	rm -f parser lex.yy.c syntax.tab.c syntax.tab.h syntax.output parser-gdb
