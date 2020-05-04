@@ -197,6 +197,7 @@ void ircode_opt_zero_tmp(IrCode* tail);
 void ircode_opt_exist_once(IrCode* tail);
 void ircode_opt_assign_once(IrCode* tail);
 void ircode_opt_address(IrCode* tail);
+void ircode_opt_as_tmp(IrCode* tail);
 void ircode_opt_call(IrCode* tail);
 void ircode_opt_eval(IrCode* tail);
 void ircode_opt_eval_zeros(IrCode* tail);
@@ -214,6 +215,7 @@ void ircode_opt(IrCode* tail) {
         ircode_opt_exist_once(tail);
         ircode_opt_assign_once(tail);
         ircode_opt_address(tail);
+        ircode_opt_as_tmp(tail);
         // ircode_opt_call(tail);
         ircode_opt_eval(tail);
         ircode_opt_eval_zeros(tail);
@@ -353,6 +355,43 @@ void ircode_opt_address(IrCode* tail) {
         ircode_opt_address_once(ptr->x);
         ircode_opt_address_once(ptr->y);
         ircode_opt_address_once(ptr->z);
+        ptr = ptr->next;
+    }
+}
+
+void ircode_opt_as_tmp(IrCode* tail) {
+    // t1 := x + y
+    // z  := t1
+
+    IrCode* ptr = tail->next;
+
+    while (ptr != tail) {
+        if ((ptr->type == CODE_ADD || ptr->type == CODE_SUB || ptr->type == CODE_MUL || ptr->type == CODE_DIV ||
+             ptr->type == CODE_ASSIGN) &&
+            ptr->x->type == OP_TEMP && ptr->next && ptr->next->type == CODE_ASSIGN &&
+            (ptr->type == CODE_ASSIGN || (ptr->next->x->type != OP_GETADDR && ptr->next->x->type != OP_GETDATA)) &&
+            ptr->next->y->type == OP_TEMP && ptr->next->y->data_int == ptr->x->data_int) {
+            IrCode* ptr2 = ptr;
+            int flag = 0;
+            while (ptr2 != tail) {
+                if (ircode_opt_get_tmp_id(ptr2->x) == ptr->x->data_int)
+                    flag++;
+                if (ircode_opt_get_tmp_id(ptr2->y) == ptr->x->data_int)
+                    flag++;
+                if (ircode_opt_get_tmp_id(ptr2->z) == ptr->x->data_int)
+                    flag++;
+
+                if (flag > 2)
+                    break;
+
+                ptr2 = ptr2->next;
+            }
+            if (flag == 2) {
+                memcpy(ptr->x, ptr->next->x, sizeof(IrOprand));
+                IrCode_delete(ptr->next);
+            }
+        }
+
         ptr = ptr->next;
     }
 }
