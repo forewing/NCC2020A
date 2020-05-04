@@ -195,12 +195,21 @@ void IrCode_print(FILE* fp, IrCode* tail) {
 
 void ircode_opt_zero_tmp(IrCode* tail);
 void ircode_opt_exist_once(IrCode* tail);
+void ircode_opt_assign_once(IrCode* tail);
 void ircode_opt_address(IrCode* tail);
 void ircode_opt_eval(IrCode* tail);
 
+int* tmpvar_int_list = NULL;
+void** tmpvar_ptr_list = NULL;
+void** tmpvar_ptr_list_2 = NULL;
+
 void ircode_opt(IrCode* tail) {
+    tmpvar_int_list = (int*)malloc(sizeof(int) * tmpvar_num);
+    tmpvar_ptr_list = (void**)malloc(sizeof(void*) * tmpvar_num);
+    tmpvar_ptr_list_2 = (void**)malloc(sizeof(void*) * tmpvar_num);
     ircode_opt_zero_tmp(tail);
     ircode_opt_exist_once(tail);
+    // ircode_opt_assign_once(tail);
     ircode_opt_address(tail);
     ircode_opt_eval(tail);
 }
@@ -219,30 +228,32 @@ void ircode_opt_zero_tmp(IrCode* tail) {
     }
 }
 
-int ircode_opt_exist_once_helper(IrOprand* op) {
+int ircode_opt_get_tmp_id(IrOprand* op) {
     if (!op)
         return -1;
     if (op->type == OP_TEMP)
         return op->data_int;
     if (op->type == OP_GETADDR || op->type == OP_GETDATA)
-        return ircode_opt_exist_once_helper(op->data_op);
+        return ircode_opt_get_tmp_id(op->data_op);
     return -1;
 }
 
 void ircode_opt_exist_once(IrCode* tail) {
-    int* tmp_used_times = (int*)malloc(sizeof(int) * tmpvar_num);
+    if (!tmpvar_int_list)
+        return;
+
     for (int i = 0; i < tmpvar_num; i++)
-        tmp_used_times[i] = 0;
+        tmpvar_int_list[i] = 0;
 
     IrCode* ptr = tail->next;
     while (ptr != tail) {
         int tmp_id[3];
-        tmp_id[0] = ircode_opt_exist_once_helper(ptr->x);
-        tmp_id[1] = ircode_opt_exist_once_helper(ptr->y);
-        tmp_id[2] = ircode_opt_exist_once_helper(ptr->z);
+        tmp_id[0] = ircode_opt_get_tmp_id(ptr->x);
+        tmp_id[1] = ircode_opt_get_tmp_id(ptr->y);
+        tmp_id[2] = ircode_opt_get_tmp_id(ptr->z);
         for (int i = 0; i < 3; i++) {
             if (tmp_id[i] != -1) {
-                tmp_used_times[tmp_id[i]]++;
+                tmpvar_int_list[tmp_id[i]]++;
             }
         }
         ptr = ptr->next;
@@ -252,15 +263,64 @@ void ircode_opt_exist_once(IrCode* tail) {
     while (ptr != tail) {
         if ((ptr->type == CODE_ASSIGN || ptr->type == CODE_ADD || ptr->type == CODE_SUB || ptr->type == CODE_MUL ||
              ptr->type == CODE_DIV) &&
-            ptr->x->type == OP_TEMP && tmp_used_times[ptr->x->data_int] <= 1) {
+            ptr->x->type == OP_TEMP && tmpvar_int_list[ptr->x->data_int] <= 1) {
             ptr = ptr->next;
             IrCode_delete(ptr->prev);
         } else {
             ptr = ptr->next;
         }
     }
+}
 
-    free(tmp_used_times);
+void ircode_opt_assign_once(IrCode* tail) {
+    if (!tmpvar_ptr_list || !tmpvar_int_list || !tmpvar_ptr_list_2)
+        return;
+
+    for (int i = 0; i < tmpvar_num; i++) {
+        tmpvar_int_list[i] = 0;
+        tmpvar_ptr_list[i] = NULL;
+    }
+
+    IrCode* ptr = tail->next;
+    while (ptr != tail) {
+        if ((ptr->type == CODE_ASSIGN || ptr->type == CODE_ADD || ptr->type == CODE_SUB || ptr->type == CODE_MUL ||
+             ptr->type == CODE_DIV || ptr->type == CODE_CALL) &&
+            ptr->x->type == OP_TEMP) {
+            tmpvar_int_list[ptr->x->data_int]++;
+            if (ptr->type == CODE_ASSIGN) {
+                tmpvar_ptr_list[ptr->x->data_int] = ptr->y;
+                tmpvar_ptr_list_2[ptr->x->data_int] = ptr;
+            }
+        }
+
+        ptr = ptr->next;
+    }
+
+    // TODO
+    for (int i = 0; i < tmpvar_num; i++) {
+        if (tmpvar_int_list[i] != 1 || !tmpvar_ptr_list[i])
+            continue;
+
+        IrCode_delete(tmpvar_ptr_list_2[i]);
+
+        IrCode* ptr = tail->next;
+        while (ptr != tail) {
+            ptr = ptr->next;
+            IrOprand* tmp[3];
+            tmp[0] = ptr->x;
+            tmp[1] = ptr->y;
+            tmp[2] = ptr->z;
+            for (int j = 0; j < 3; j++) {
+                if (!tmp[j])
+                    continue;
+                IrOprand* op = tmp[j];
+                while (op->type == OP_GETADDR || op->type == OP_GETADDR)
+                    op = op->data_op;
+                if (op->type == OP_TEMP && op->data_int == i)
+                    memcpy(op, tmpvar_ptr_list[i], sizeof(IrOprand));
+            }
+        }
+    }
 }
 
 void ircode_opt_address_once(IrOprand* op) {
