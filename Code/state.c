@@ -77,6 +77,8 @@ void symtab_build() {
     symtab_root = symtab;
 
     ircode_list = IrCode_new(CODE_NOP, 0, NULL, NULL, NULL);
+    ircode_list->next = ircode_list;
+    ircode_list->prev = ircode_list;
 
     state_Program(tree_root);
 }

@@ -56,8 +56,7 @@ IrCode* IrCode_new(int type, int data, IrOprand* x, IrOprand* y, IrOprand* z) {
 void IrCode_insert(IrCode* pos, IrCode* elem) {
     elem->next = pos;
     elem->prev = pos->prev;
-    if (pos->prev)
-        pos->prev->next = elem;
+    pos->prev->next = elem;
     pos->prev = elem;
 }
 
@@ -114,10 +113,8 @@ const char* IrOprand_print(IrOprand* op) {
 }
 
 void IrCode_print(FILE* fp, IrCode* tail) {
-    IrCode* ptr = tail;
-    while (ptr->prev)
-        ptr = ptr->prev;
-    while (ptr) {
+    IrCode* ptr = tail->next;
+    while (ptr != tail) {
         const char* x = IrOprand_print(ptr->x);
         const char* y = IrOprand_print(ptr->y);
         const char* z = IrOprand_print(ptr->z);
@@ -212,9 +209,11 @@ void ircode_opt(IrCode* tail) {
 }
 
 void ircode_opt_useless(IrCode* tail) {
-    IrCode* ptr = tail;
-    while (ptr->prev)
-        ptr = ptr->prev;
+    // while (ptr) {
+    //     if (ptr->x && ptr->x->type == OP_TEMP && ptr->x->data_int == 0) {
+    //         ptr = ptr->next;
+    //     }
+    // }
 }
 
 void ircode_opt_address(IrCode* tail) {}
