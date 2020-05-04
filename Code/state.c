@@ -651,11 +651,12 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
         // A single exp1's size can be get by exp1.next.size
         // target_address := &exp1 + exp1.next.size * int(exp2)
 
+        int tmp_offset = tmpvar_new();
         int tmp_addr = tmpvar_new();
-        CODE_INSERT(CODE_MUL, 0, OP_NEW_TEMP(tmp_addr), OP_NEW_TEMP(tmp_2),
+        CODE_INSERT(CODE_MUL, 0, OP_NEW_TEMP(tmp_offset), OP_NEW_TEMP(tmp_2),
                     OP_NEW_CONST(exp1.node->data_array.next->size));
 
-        CODE_INSERT(CODE_ADD, 0, OP_NEW_TEMP(tmp_addr), OP_NEW_TEMP(tmp_addr), OP_NEW_TEMP(exp1.addr));
+        CODE_INSERT(CODE_ADD, 0, OP_NEW_TEMP(tmp_addr), OP_NEW_TEMP(tmp_offset), OP_NEW_TEMP(exp1.addr));
 
         CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(target), OP_NEW_GETDATA_T(tmp_addr), NULL);
 
