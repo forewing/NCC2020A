@@ -214,7 +214,7 @@ void ircode_opt(IrCode* tail) {
         ircode_opt_exist_once(tail);
         ircode_opt_assign_once(tail);
         ircode_opt_address(tail);
-        ircode_opt_call(tail);
+        // ircode_opt_call(tail);
         ircode_opt_eval(tail);
         ircode_opt_eval_zeros(tail);
     }
@@ -396,7 +396,7 @@ void ircode_opt_eval(IrCode* tail) {
 void ircode_opt_eval_zeros(IrCode* tail) {
     IrCode* ptr = tail->next;
     while (ptr != tail) {
-        if (ptr->type != CODE_ADD && ptr->type != CODE_SUB && ptr->type != CODE_MUL) {
+        if (ptr->type != CODE_ADD && ptr->type != CODE_SUB && ptr->type != CODE_MUL && ptr->type != CODE_DIV) {
             ptr = ptr->next;
             continue;
         }
@@ -417,6 +417,16 @@ void ircode_opt_eval_zeros(IrCode* tail) {
             ptr->type = CODE_ASSIGN;
             ptr->y->type = OP_CONST;
             ptr->y->data_int = 0;
+            ptr->z = NULL;
+        } else if ((ptr->type == CODE_MUL || ptr->type == CODE_DIV) &&
+                   (ptr->z->type == OP_CONST && ptr->z->data_int == 1)) {
+            // x */ 1 = x
+            ptr->type = CODE_ASSIGN;
+            ptr->z = NULL;
+        } else if (ptr->type == CODE_MUL && ptr->y->type == OP_CONST && ptr->y->data_int == 1) {
+            // 1 * x = x
+            ptr->type = CODE_ASSIGN;
+            memcpy(ptr->y, ptr->z, sizeof(IrOprand));
             ptr->z = NULL;
         }
 
