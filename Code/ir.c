@@ -209,11 +209,17 @@ void ircode_opt(IrCode* tail) {
 }
 
 void ircode_opt_useless(IrCode* tail) {
-    // while (ptr) {
-    //     if (ptr->x && ptr->x->type == OP_TEMP && ptr->x->data_int == 0) {
-    //         ptr = ptr->next;
-    //     }
-    // }
+    IrCode* ptr = tail->next;
+    while (ptr != tail) {
+        if ((ptr->type == CODE_ASSIGN || ptr->type == CODE_ADD || ptr->type == CODE_SUB || ptr->type == CODE_MUL ||
+             ptr->type == CODE_DIV) &&
+            ptr->x->type == OP_TEMP && ptr->x->data_int == 0) {
+            ptr = ptr->next;
+            IrCode_delete(ptr->prev);
+        } else {
+            ptr = ptr->next;
+        }
+    }
 }
 
 void ircode_opt_address(IrCode* tail) {}
