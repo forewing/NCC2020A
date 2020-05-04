@@ -6,14 +6,7 @@
 
 #include "helper.h"
 
-enum SYMBOL_TYPE {
-    TYPE_INT,
-    TYPE_FLOAT,
-    TYPE_ARRAY,
-    TYPE_STRUCT,
-    TYPE_FUNC,
-    TYPE_INVALID
-};
+enum SYMBOL_TYPE { TYPE_INT, TYPE_FLOAT, TYPE_ARRAY, TYPE_STRUCT, TYPE_FUNC, TYPE_INVALID };
 
 typedef struct SymNode {
     union {

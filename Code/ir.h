@@ -8,16 +8,7 @@
 #include "helper.h"
 #include "tree.h"
 
-enum OP_TYPE {
-    OP_NULL,
-    OP_CONST,
-    OP_VAR,
-    OP_GETADDR,
-    OP_GETDATA,
-    OP_FUNC,
-    OP_LABEL,
-    OP_TEMP
-};
+enum OP_TYPE { OP_NULL, OP_CONST, OP_VAR, OP_GETADDR, OP_GETDATA, OP_FUNC, OP_LABEL, OP_TEMP };
 
 typedef struct IrOprand {
     int type;

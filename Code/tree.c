@@ -43,8 +43,7 @@ static void _print_syntax_tree(TreeNode* root, int tabs) {
     } else if (root->state_type == STATE_ID) {
         printf("ID: %s\n", root->data_str);
     } else if (root->state_type == STATE_TYPE) {
-        printf("TYPE: %s\n",
-               root->data_int == TYPENAME_FLOAT ? "float" : "int");
+        printf("TYPE: %s\n", root->data_int == TYPENAME_FLOAT ? "float" : "int");
     } else if (root->state_type == STATE_INT) {
         printf("INT: %ld\n", root->data_int);
     } else if (root->state_type == STATE_FLOAT) {
