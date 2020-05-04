@@ -226,17 +226,34 @@ SymNode* state_VarDec(TreeNode* root, SymNode* type) {
         return type;
     } else {
         // VarDec LB INT RB
-        SymNode* pre = state_VarDec(rch0, type);
-        SymNode* ret = type_new_array(pre);
-        ret->data_array.size = rch2->data_int;
-        ret->size = rch2->data_int * pre->size;
-        ret->name = pre->name;
-        if (pre->type == TYPE_ARRAY) {
-            ret->data_array.dimen = pre->data_array.dimen + 1;
-        } else {
-            ret->data_array.dimen = 1;
+
+        // root->data_int stores the array dimen
+        // a[5][4][3] for [3, 4, 5]
+        int* sizes = (int*)malloc(root->data_int * sizeof(int));
+
+        // Find the size of each dimen
+        TreeNode* elem = root;
+        for (int i = 0; i < root->data_int; i++) {
+            sizes[i] = elem->children[2]->data_int;
+            elem = elem->children[0];
         }
-        return ret;
+
+        // elem is now VarDec -> ID
+        SymNode* dimen = type_dup_left(type);
+        dimen->name = elem->children[0]->data_str;
+
+        for (int i = 0; i < root->data_int; i++) {
+            SymNode* dimen_new = type_new_array(dimen);
+            dimen_new->data_array.dimen = i + 1;
+            dimen_new->data_array.size = sizes[i];
+            dimen_new->name = dimen->name;
+            dimen_new->size = dimen->size * sizes[i];
+            dimen = dimen_new;
+        }
+
+        free(sizes);
+
+        return dimen;
     }
 }
 
@@ -632,7 +649,10 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
 
         int tmp_addr = tmpvar_new();
         CODE_INSERT(CODE_MUL, 0, OP_NEW_TEMP(tmp_addr), OP_NEW_TEMP(tmp_2),
-                    OP_NEW_CONST(exp1.node->size));
+                    OP_NEW_CONST(exp1.node->data_array.next->size));
+
+        CODE_INSERT(CODE_ADD, 0, OP_NEW_TEMP(tmp_addr), OP_NEW_TEMP(tmp_addr),
+                    OP_NEW_TEMP(exp1.addr));
 
         CODE_INSERT(CODE_GETDATA, 0, OP_NEW_TEMP(target), OP_NEW_TEMP(tmp_addr),
                     NULL);
