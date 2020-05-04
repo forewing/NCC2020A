@@ -89,4 +89,7 @@ extern int tmpvar_num;
 extern int label_num;
 extern int compst_num;
 
+int tmpvar_new();
+int label_new();
+
 #endif

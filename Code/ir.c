@@ -5,6 +5,13 @@ int tmpvar_num = 1;
 int label_num = 1;
 int compst_num = 1;
 
+int tmpvar_new() {
+    return tmpvar_num++;
+}
+int label_new() {
+    return label_num++;
+}
+
 IrOprand* IrOprand_new(int type) {
     IrOprand* ret = (IrOprand*)malloc(sizeof(IrOprand));
     ret->type = type;
@@ -87,7 +94,7 @@ const char* IrOprand_print(IrOprand* op) {
             MALLOC_PRINTF(ret, "*%s", IrOprand_print(op->data_op));
             break;
         case OP_FUNC:
-            MALLOC_PRINTF(ret, "f_%s", op->data_str);
+            MALLOC_PRINTF(ret, "%s", op->data_str);
             break;
         case OP_LABEL:
             MALLOC_PRINTF(ret, "l_%d", op->data_int);
@@ -114,10 +121,10 @@ void IrCode_print(FILE* fp, IrCode* root) {
             case CODE_NOP:
                 break;
             case CODE_LABEL:
-                fprintf(fp, "LABEL\t%s:\n", x);
+                fprintf(fp, "LABEL\t%s :\n", x);
                 break;
             case CODE_FUNC:
-                fprintf(fp, "FUNCTION\t%s:\n", x);
+                fprintf(fp, "FUNCTION\t%s :\n", x);
                 break;
             case CODE_ASSIGN:
                 fprintf(fp, "%s\t:=\t%s\n", x, y);

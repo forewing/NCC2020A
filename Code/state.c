@@ -326,15 +326,15 @@ void state_Stmt(TreeNode* root, SymNode* ret) {
 
     } else if (rsz == 3) {
         // RETURN Exp SEMI
-        int target = tmpvar_num++;
+        int target = tmpvar_new();
         ExpRet_t exp = state_Exp(rch1, target);
         CODE_INSERT(CODE_RET, 0, OP_NEW_TEMP(target), NULL, NULL);
 
     } else if (rch0->state_type == STATE_WHILE) {
         // WHILE LP Exp RP Stmt
-        int label1 = label_num++;
-        int label2 = label_num++;
-        int label3 = label_num++;
+        int label1 = label_new();
+        int label2 = label_new();
+        int label3 = label_new();
 
         CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label1), NULL, NULL);
 
@@ -350,8 +350,8 @@ void state_Stmt(TreeNode* root, SymNode* ret) {
 
     } else if (rsz == 5) {
         // IF    LP Exp RP Stmt
-        int label1 = label_num++;
-        int label2 = label_num++;
+        int label1 = label_new();
+        int label2 = label_new();
 
         state_Cond(rch2, label1, label2);
 
@@ -363,9 +363,9 @@ void state_Stmt(TreeNode* root, SymNode* ret) {
 
     } else {
         // IF    LP Exp RP Stmt ELSE Stmt
-        int label1 = label_num++;
-        int label2 = label_num++;
-        int label3 = label_num++;
+        int label1 = label_new();
+        int label2 = label_new();
+        int label3 = label_new();
 
         state_Cond(rch2, label1, label2);
 
@@ -430,14 +430,16 @@ void state_Dec(TreeNode* root, SymNode* type, SymNode** type_pos) {
         *type_pos = node;
     } else {
         // Normal Dec
-        CODE_INSERT(CODE_DEC, node->size, OP_NEW_VAR(node->name), NULL, NULL);
+        if (node->type == TYPE_STRUCT || node->type == TYPE_ARRAY)
+            CODE_INSERT(CODE_DEC, node->size, OP_NEW_VAR(node->name), NULL,
+                        NULL);
     }
 
     // VarDec
     if (root->size == 3) {
         // VarDec ASSIGNOP Exp
 
-        int target = tmpvar_num++;
+        int target = tmpvar_new();
         state_Exp(rch2, target);
 
         CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_VAR(node->name), OP_NEW_TEMP(target),
@@ -471,7 +473,7 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
         SymNode* id = symtab_lookup_all(rch0->data_str);
         if (rsz == 1) {
             // ID
-            int addr_tmp = tmpvar_num++;
+            int addr_tmp = tmpvar_new();
 
             if (id->is_param &&
                 (id->type == TYPE_ARRAY || id->type == TYPE_STRUCT)) {
@@ -515,7 +517,7 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
                             OP_NEW_CONST(0), NULL);
             } else {
                 for (int i = args->data_struct.size - 1; i >= 0; i--) {
-                    CODE_INSERT(CODE_PARAM, 0, OP_NEW_TEMP(tmp_pos[i]), NULL,
+                    CODE_INSERT(CODE_ARG, 0, OP_NEW_TEMP(tmp_pos[i]), NULL,
                                 NULL);
                 }
 
@@ -539,8 +541,8 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
         rch1->state_type == STATE_AND || rch1->state_type == STATE_OR) {
         // NOT, RELOP, AND, OR
 
-        int label1 = label_num++;
-        int label2 = label_num++;
+        int label1 = label_new();
+        int label2 = label_new();
 
         CODE_INSERT(CODE_ASSIGN, 0, OP_NEW_TEMP(target), OP_NEW_CONST(0), NULL);
 
@@ -555,8 +557,8 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
         return ExpRet_val(type_new_int(0));
     }
 
-    int tmp_1 = tmpvar_num++;
-    int tmp_2 = tmpvar_num++;
+    int tmp_1 = tmpvar_new();
+    int tmp_2 = tmpvar_new();
 
     // if (rsz == )
     ExpRet_t exp1;
@@ -572,7 +574,6 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
     ExpRet_t exp2;
     if (rsz >= 3 && rch2->state_type == STATE_Exp) {
         exp2 = state_Exp(rch2, tmp_2);
-        tmp_2 = tmpvar_num - 1;
     }
 
     if (rch0->state_type == STATE_MINUS || rch1->state_type == STATE_PLUS ||
@@ -616,7 +617,7 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
             }
         }
 
-        int tmp_addr = tmpvar_num++;
+        int tmp_addr = tmpvar_new();
         CODE_INSERT(CODE_ADD, 0, OP_NEW_TEMP(tmp_addr), OP_NEW_TEMP(exp1.addr),
                     OP_NEW_CONST(offset));
 
@@ -629,7 +630,7 @@ ExpRet_t state_Exp(TreeNode* root, int target) {
     if (rch1->state_type == STATE_LB) {
         // Exp LB Exp RB
 
-        int tmp_addr = tmpvar_num++;
+        int tmp_addr = tmpvar_new();
         CODE_INSERT(CODE_MUL, 0, OP_NEW_TEMP(tmp_addr), OP_NEW_TEMP(tmp_2),
                     OP_NEW_CONST(exp1.node->size));
 
@@ -674,8 +675,8 @@ void state_Cond(TreeNode* root, int label_true, int label_false) {
         if (rch1->state_type == STATE_RELOP) {
             // Exp1 RELOP Exp2
 
-            int tmp1 = tmpvar_num++;
-            int tmp2 = tmpvar_num++;
+            int tmp1 = tmpvar_new();
+            int tmp2 = tmpvar_new();
 
             state_Exp(rch0, tmp1);
             state_Exp(rch2, tmp2);
@@ -689,7 +690,7 @@ void state_Cond(TreeNode* root, int label_true, int label_false) {
         } else if (rch1->state_type == STATE_AND) {
             // Exp1 and Exp2
 
-            int label1 = label_num++;
+            int label1 = label_new();
 
             state_Cond(rch0, label1, label_false);
             CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label1), NULL, NULL);
@@ -700,7 +701,7 @@ void state_Cond(TreeNode* root, int label_true, int label_false) {
         } else if (rch1->state_type == STATE_OR) {
             // Exp1 or Exp2
 
-            int label1 = label_num++;
+            int label1 = label_new();
 
             state_Cond(rch0, label_true, label1);
             CODE_INSERT(CODE_LABEL, 0, OP_NEW_LABEL(label1), NULL, NULL);
@@ -715,7 +716,7 @@ void state_Cond(TreeNode* root, int label_true, int label_false) {
 
     // Others
 
-    int tmp1 = tmpvar_num++;
+    int tmp1 = tmpvar_new();
     state_Exp(root, tmp1);
     CODE_INSERT(CODE_GOCOND, RELOP_NE, OP_NEW_TEMP(tmp1), OP_NEW_CONST(0),
                 OP_NEW_LABEL(label_true));
@@ -727,7 +728,7 @@ void state_Cond(TreeNode* root, int label_true, int label_false) {
 
 void state_Args(TreeNode* root, SymNode** type_pos, int* tmp_pos) {
     // Exp
-    *tmp_pos = tmpvar_num++;
+    *tmp_pos = tmpvar_new();
     ExpRet_t exp = state_Exp(rch0, *tmp_pos);
     *type_pos = exp.node;
     if (exp.node->type == TYPE_STRUCT || exp.node->type == TYPE_ARRAY) {
