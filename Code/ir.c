@@ -197,8 +197,8 @@ void ircode_opt_zero_tmp(IrCode* tail);
 void ircode_opt_exist_once(IrCode* tail);
 void ircode_opt_assign_once(IrCode* tail);
 void ircode_opt_address(IrCode* tail);
+void ircode_opt_assign_self(IrCode* tail);
 void ircode_opt_as_tmp(IrCode* tail);
-void ircode_opt_call(IrCode* tail);
 void ircode_opt_eval(IrCode* tail);
 void ircode_opt_eval_zeros(IrCode* tail);
 
@@ -215,8 +215,8 @@ void ircode_opt(IrCode* tail) {
         ircode_opt_exist_once(tail);
         ircode_opt_assign_once(tail);
         ircode_opt_address(tail);
+        ircode_opt_assign_self(tail);
         ircode_opt_as_tmp(tail);
-        // ircode_opt_call(tail);
         ircode_opt_eval(tail);
         ircode_opt_eval_zeros(tail);
     }
@@ -359,6 +359,40 @@ void ircode_opt_address(IrCode* tail) {
     }
 }
 
+int irop_same(IrOprand* l, IrOprand* r) {
+    if (!l || !r)
+        return 0;
+
+    if (l->type != r->type)
+        return 0;
+
+    if (l->type == OP_GETADDR || l->type == OP_GETDATA) {
+        return irop_same(l->data_op, r->data_op);
+    }
+
+    if (l->type == OP_TEMP)
+        return l->data_int == r->data_int;
+
+    if (l->type == OP_VAR)
+        return !strcmp(l->data_str, r->data_str);
+
+    return 0;
+}
+
+void ircode_opt_assign_self(IrCode* tail) {
+    // t1 := t1
+    IrCode* ptr = tail->next;
+
+    while (ptr != tail) {
+        if (ptr->type == CODE_ASSIGN && irop_same(ptr->x, ptr->y)) {
+            ptr = ptr->next;
+            IrCode_delete(ptr->prev);
+        } else {
+            ptr = ptr->next;
+        }
+    }
+}
+
 void ircode_opt_as_tmp(IrCode* tail) {
     // t1 := x + y
     // z  := t1
@@ -392,16 +426,6 @@ void ircode_opt_as_tmp(IrCode* tail) {
             }
         }
 
-        ptr = ptr->next;
-    }
-}
-
-void ircode_opt_call(IrCode* tail) {
-    if (!tmpvar_int_list || !tmpvar_ptr_list || !tmpvar_ptr_list_2)
-        return;
-
-    IrCode* ptr = tail->next;
-    while (ptr != tail) {
         ptr = ptr->next;
     }
 }
