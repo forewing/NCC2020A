@@ -337,14 +337,12 @@ void ircode_opt_assign_once(IrCode* tail) {
 
         IrCode_delete(tmpvar_ptr_list_2[i]);
 
-        // Used to locate blocks, since a tmp is used only in SINGLE block
-        int func_times = 0;
-
         while (ptr != tail) {
             ptr = ptr->next;
 
+            // Search only in blocks
             if (ptr->type == CODE_FUNC)
-                func_times++;
+                break;
 
             IrOprand* tmp[3];
             tmp[0] = ptr->x;
@@ -359,9 +357,6 @@ void ircode_opt_assign_once(IrCode* tail) {
                 if (op->type == OP_TEMP && op->data_int == i)
                     memcpy(op, tmpvar_ptr_list[i], sizeof(IrOprand));
             }
-
-            if (func_times >= 1)
-                break;
         }
     }
 }
@@ -449,7 +444,7 @@ void ircode_opt_as_tmp(IrCode* tail) {
             ptr->next->y->type == OP_TEMP && ptr->next->y->data_int == ptr->x->data_int) {
             IrCode* ptr2 = ptr;
             int flag = 0;
-            while (ptr2 != tail) {
+            while (ptr2 != tail && ptr2->type != CODE_FUNC) {
                 if (ircode_opt_get_tmp_id(ptr2->x) == ptr->x->data_int)
                     flag++;
                 if (ircode_opt_get_tmp_id(ptr2->y) == ptr->x->data_int)
@@ -684,7 +679,7 @@ void ircode_opt_dup_label(IrCode* tail) {
         if (ptr->type == CODE_LABEL) {
             int label_id = ptr->x->data_int;
             ptr = ptr->next;
-            while (ptr != tail && ptr->type == CODE_LABEL) {
+            while (ptr != tail && ptr->type == CODE_LABEL && ptr->type != CODE_FUNC) {
                 label_list[ptr->x->data_int] = label_id;
                 ptr = ptr->next;
                 IrCode_delete(ptr->prev);
