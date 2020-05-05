@@ -16,6 +16,7 @@ rm -rf Lab/Code/parser-gdb*
 mkdir -p Lab/Test
 cp -r Test/Lab1 Lab/Test
 cp -r Test/Lab2 Lab/Test
+cp -r Test/Lab3 Lab/Test
 
 cp README Lab/
 
