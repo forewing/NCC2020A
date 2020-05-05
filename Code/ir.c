@@ -333,11 +333,19 @@ void ircode_opt_assign_once(IrCode* tail) {
 
         ircode_can_opt = 1;
 
+        IrCode* ptr = ((IrCode**)tmpvar_ptr_list_2)[i]->prev;
+
         IrCode_delete(tmpvar_ptr_list_2[i]);
 
-        IrCode* ptr = tail->next;
+        // Used to locate blocks, since a tmp is used only in SINGLE block
+        int func_times = 0;
+
         while (ptr != tail) {
             ptr = ptr->next;
+
+            if (ptr->type == CODE_FUNC)
+                func_times++;
+
             IrOprand* tmp[3];
             tmp[0] = ptr->x;
             tmp[1] = ptr->y;
@@ -351,6 +359,9 @@ void ircode_opt_assign_once(IrCode* tail) {
                 if (op->type == OP_TEMP && op->data_int == i)
                     memcpy(op, tmpvar_ptr_list[i], sizeof(IrOprand));
             }
+
+            if (func_times >= 1)
+                break;
         }
     }
 }
