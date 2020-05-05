@@ -210,12 +210,18 @@ int* tmpvar_int_list = NULL;
 void** tmpvar_ptr_list = NULL;
 void** tmpvar_ptr_list_2 = NULL;
 
+int ircode_can_opt = 0;
+
 void ircode_opt(IrCode* tail) {
     tmpvar_int_list = (int*)malloc(sizeof(int) * tmpvar_num);
     tmpvar_ptr_list = (void**)malloc(sizeof(void*) * tmpvar_num);
     tmpvar_ptr_list_2 = (void**)malloc(sizeof(void*) * tmpvar_num);
     ircode_opt_zero_tmp(tail);
-    for (int i = 0; i < 5; i++) {
+
+    ircode_can_opt = 1;
+
+    while (ircode_can_opt) {
+        ircode_can_opt = 0;
         ircode_opt_exist_once(tail);
         ircode_opt_assign_once(tail);
         ircode_opt_address(tail);
@@ -281,6 +287,8 @@ void ircode_opt_exist_once(IrCode* tail) {
         if ((ptr->type == CODE_ASSIGN || ptr->type == CODE_ADD || ptr->type == CODE_SUB || ptr->type == CODE_MUL ||
              ptr->type == CODE_DIV) &&
             ptr->x->type == OP_TEMP && tmpvar_int_list[ptr->x->data_int] <= 1) {
+            ircode_can_opt = 1;
+
             ptr = ptr->next;
             IrCode_delete(ptr->prev);
         } else {
@@ -317,6 +325,8 @@ void ircode_opt_assign_once(IrCode* tail) {
         if (tmpvar_int_list[i] != 1 || !tmpvar_ptr_list[i])
             continue;
 
+        ircode_can_opt = 1;
+
         IrCode_delete(tmpvar_ptr_list_2[i]);
 
         IrCode* ptr = tail->next;
@@ -346,12 +356,16 @@ void ircode_opt_address_once(IrOprand* op) {
     if (op->type == OP_GETADDR) {
         IrOprand* op2 = op->data_op;
         if (op2 && op2->type == OP_GETDATA && op2->data_op) {
+            ircode_can_opt = 1;
+
             memcpy(op, op2->data_op, sizeof(IrOprand));
             ircode_opt_address_once(op);
         }
     } else if (op->type == OP_GETDATA) {
         IrOprand* op2 = op->data_op;
         if (op2 && op2->type == OP_GETADDR && op2->data_op) {
+            ircode_can_opt = 1;
+
             memcpy(op, op2->data_op, sizeof(IrOprand));
             ircode_opt_address_once(op);
         }
@@ -394,6 +408,8 @@ void ircode_opt_assign_self(IrCode* tail) {
 
     while (ptr != tail) {
         if (ptr->type == CODE_ASSIGN && irop_same(ptr->x, ptr->y)) {
+            ircode_can_opt = 1;
+
             ptr = ptr->next;
             IrCode_delete(ptr->prev);
         } else {
@@ -430,6 +446,8 @@ void ircode_opt_as_tmp(IrCode* tail) {
                 ptr2 = ptr2->next;
             }
             if (flag == 2) {
+                ircode_can_opt = 1;
+
                 memcpy(ptr->x, ptr->next->x, sizeof(IrOprand));
                 IrCode_delete(ptr->next);
             }
@@ -455,6 +473,8 @@ void ircode_opt_eval(IrCode* tail) {
                 else if (ptr->type == CODE_DIV)
                     result = ptr->y->data_int / ptr->z->data_int;
 
+                ircode_can_opt = 1;
+
                 ptr->type = CODE_ASSIGN;
 
                 ptr->y->data_int = result;
@@ -475,17 +495,20 @@ void ircode_opt_eval_zeros(IrCode* tail) {
 
         if (ptr->y->type == OP_CONST && ptr->y->data_int == 0 && ptr->type == CODE_ADD) {
             // 0 + x = x
+            ircode_can_opt = 1;
             ptr->type = CODE_ASSIGN;
             memcpy(ptr->y, ptr->z, sizeof(IrOprand));
             ptr->z = NULL;
         } else if (ptr->z->type == OP_CONST && ptr->z->data_int == 0 &&
                    (ptr->type == CODE_ADD || ptr->type == CODE_SUB)) {
             // x +- 0 = x
+            ircode_can_opt = 1;
             ptr->type = CODE_ASSIGN;
             ptr->z = NULL;
         } else if ((ptr->type == CODE_MUL) && ((ptr->y->type == OP_CONST && ptr->y->data_int == 0) ||
                                                (ptr->z->type == OP_CONST && ptr->z->data_int == 0))) {
             // 0 * x = x * 0 = 0
+            ircode_can_opt = 1;
             ptr->type = CODE_ASSIGN;
             ptr->y->type = OP_CONST;
             ptr->y->data_int = 0;
@@ -493,10 +516,12 @@ void ircode_opt_eval_zeros(IrCode* tail) {
         } else if ((ptr->type == CODE_MUL || ptr->type == CODE_DIV) &&
                    (ptr->z->type == OP_CONST && ptr->z->data_int == 1)) {
             // x */ 1 = x
+            ircode_can_opt = 1;
             ptr->type = CODE_ASSIGN;
             ptr->z = NULL;
         } else if (ptr->type == CODE_MUL && ptr->y->type == OP_CONST && ptr->y->data_int == 1) {
             // 1 * x = x
+            ircode_can_opt = 1;
             ptr->type = CODE_ASSIGN;
             memcpy(ptr->y, ptr->z, sizeof(IrOprand));
             ptr->z = NULL;
