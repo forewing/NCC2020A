@@ -1,0 +1,9 @@
+version: "2"
+
+services:
+  runner:
+    build: .
+    volumes:
+        - .:/work
+    working_dir: /work
+    command: ./entrypoint.sh
