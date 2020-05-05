@@ -205,10 +205,12 @@ void ircode_opt_if_reverse(IrCode* tail);
 void ircode_opt_if_const(IrCode* tail);
 void ircode_opt_useless_goto(IrCode* tail);
 void ircode_opt_unused_label(IrCode* tail);
+void ircode_opt_dup_label(IrCode* tail);
 
 int* tmpvar_int_list = NULL;
 void** tmpvar_ptr_list = NULL;
 void** tmpvar_ptr_list_2 = NULL;
+int* label_list = NULL;
 
 int ircode_can_opt = 0;
 
@@ -216,6 +218,9 @@ void ircode_opt(IrCode* tail) {
     tmpvar_int_list = (int*)malloc(sizeof(int) * tmpvar_num);
     tmpvar_ptr_list = (void**)malloc(sizeof(void*) * tmpvar_num);
     tmpvar_ptr_list_2 = (void**)malloc(sizeof(void*) * tmpvar_num);
+
+    label_list = (int*)malloc(label_num * sizeof(int));
+
     ircode_opt_zero_tmp(tail);
 
     ircode_can_opt = 1;
@@ -234,6 +239,7 @@ void ircode_opt(IrCode* tail) {
     ircode_opt_if_reverse(tail);
     ircode_opt_if_const(tail);
     ircode_opt_useless_goto(tail);
+    ircode_opt_dup_label(tail);
     ircode_opt_unused_label(tail);
 }
 
@@ -623,7 +629,9 @@ void ircode_opt_useless_goto(IrCode* tail) {
 }
 
 void ircode_opt_unused_label(IrCode* tail) {
-    int* label_list = (int*)malloc(label_num * sizeof(int));
+    if (!label_list)
+        return;
+
     for (int i = 0; i < label_num; i++)
         label_list[i] = 0;
 
@@ -648,5 +656,45 @@ void ircode_opt_unused_label(IrCode* tail) {
         } else {
             ptr = ptr->next;
         }
+    }
+}
+
+void ircode_opt_dup_label(IrCode* tail) {
+    if (!label_list)
+        return;
+
+    for (int i = 0; i < label_num; i++)
+        label_list[i] = 0;
+
+    IrCode* ptr = tail->next;
+
+    // Find labels in a row
+    while (ptr != tail) {
+        if (ptr->type == CODE_LABEL) {
+            int label_id = ptr->x->data_int;
+            ptr = ptr->next;
+            while (ptr != tail && ptr->type == CODE_LABEL) {
+                label_list[ptr->x->data_int] = label_id;
+                ptr = ptr->next;
+                IrCode_delete(ptr->prev);
+            }
+        } else {
+            ptr = ptr->next;
+        }
+    }
+
+    // Replace
+    ptr = tail->next;
+    while (ptr != tail) {
+        IrOprand* ops[3];
+        ops[0] = ptr->x;
+        ops[1] = ptr->y;
+        ops[2] = ptr->z;
+        for (int i = 0; i < 3; i++) {
+            if (ops[i] && ops[i]->type == OP_LABEL && label_list[ops[i]->data_int] != 0) {
+                ops[i]->data_int = label_list[ops[i]->data_int];
+            }
+        }
+        ptr = ptr->next;
     }
 }
