@@ -206,6 +206,7 @@ void ircode_opt_if_const(IrCode* tail);
 void ircode_opt_useless_goto(IrCode* tail);
 void ircode_opt_unused_label(IrCode* tail);
 void ircode_opt_dup_label(IrCode* tail);
+void ircode_opt_unreached_code(IrCode* tail);
 
 int* tmpvar_int_list = NULL;
 void** tmpvar_ptr_list = NULL;
@@ -235,12 +236,19 @@ void ircode_opt(IrCode* tail) {
         ircode_opt_eval(tail);
         ircode_opt_eval_zeros(tail);
     }
-    ircode_opt_address(tail);
-    ircode_opt_if_reverse(tail);
-    ircode_opt_if_const(tail);
-    ircode_opt_useless_goto(tail);
-    ircode_opt_dup_label(tail);
-    ircode_opt_unused_label(tail);
+
+    ircode_can_opt = 1;
+
+    while (ircode_can_opt) {
+        ircode_can_opt = 0;
+        ircode_opt_address(tail);
+        ircode_opt_if_reverse(tail);
+        ircode_opt_if_const(tail);
+        ircode_opt_useless_goto(tail);
+        ircode_opt_dup_label(tail);
+        ircode_opt_unused_label(tail);
+        ircode_opt_unreached_code(tail);
+    }
 }
 
 void ircode_opt_zero_tmp(IrCode* tail) {
@@ -560,6 +568,8 @@ void ircode_opt_if_reverse(IrCode* tail) {
 
             if (code_go->type == CODE_GOTO && code_label->type == CODE_LABEL && ptr->z && code_label->x) {
                 if (ptr->z->data_int == code_label->x->data_int) {
+                    ircode_can_opt = 1;
+
                     if (ptr->data_int == RELOP_EQ) {
                         ptr->data_int = RELOP_NE;
                     } else if (ptr->data_int == RELOP_NE) {
@@ -603,6 +613,9 @@ void ircode_opt_if_const(IrCode* tail) {
             } else if (ptr->data_int == RELOP_LE) {
                 result = (x <= y);
             }
+
+            ircode_can_opt = 1;
+
             if (result) {
                 memcpy(ptr->x, ptr->z, sizeof(IrOprand));
                 ptr->type = CODE_GOTO;
@@ -620,14 +633,17 @@ void ircode_opt_useless_goto(IrCode* tail) {
 
     while (ptr != tail) {
         if (ptr->type == CODE_GOTO && ptr->next->type == CODE_LABEL && ptr->x->data_int == ptr->next->x->data_int) {
+            ircode_can_opt = 1;
             // GOTO l1
             // l1:
             //  ...
             ptr = ptr->prev;
             IrCode_delete(ptr->next);
         } else if (ptr->type == CODE_GOTO && ptr->next->type == CODE_RET) {
+            ircode_can_opt = 1;
             IrCode_delete(ptr->next);
         } else if (ptr->type == CODE_RET && ptr->next->type == CODE_GOTO) {
+            ircode_can_opt = 1;
             IrCode_delete(ptr->next);
         }
         ptr = ptr->next;
@@ -658,6 +674,7 @@ void ircode_opt_unused_label(IrCode* tail) {
     while (ptr != tail) {
         if (ptr->type == CODE_LABEL && label_list[ptr->x->data_int] == 1) {
             ptr = ptr->next;
+            ircode_can_opt = 1;
             IrCode_delete(ptr->prev);
         } else {
             ptr = ptr->next;
@@ -682,6 +699,7 @@ void ircode_opt_dup_label(IrCode* tail) {
             while (ptr != tail && ptr->type == CODE_LABEL && ptr->type != CODE_FUNC) {
                 label_list[ptr->x->data_int] = label_id;
                 ptr = ptr->next;
+                ircode_can_opt = 1;
                 IrCode_delete(ptr->prev);
             }
         } else {
@@ -702,5 +720,22 @@ void ircode_opt_dup_label(IrCode* tail) {
             }
         }
         ptr = ptr->next;
+    }
+}
+
+void ircode_opt_unreached_code(IrCode* tail) {
+    IrCode* ptr = tail->next;
+
+    while (ptr != tail) {
+        if (ptr->type == CODE_RET || ptr->type == CODE_GOTO) {
+            ptr = ptr->next;
+            while (ptr != tail && ptr->type != CODE_LABEL && ptr->type != CODE_FUNC) {
+                ptr = ptr->next;
+                ircode_can_opt = 1;
+                IrCode_delete(ptr->prev);
+            }
+        } else {
+            ptr = ptr->next;
+        }
     }
 }
