@@ -490,8 +490,13 @@ void ircode_opt_eval(IrCode* tail) {
                     result = ptr->y->data_int - ptr->z->data_int;
                 else if (ptr->type == CODE_MUL)
                     result = ptr->y->data_int * ptr->z->data_int;
-                else if (ptr->type == CODE_DIV)
+                else if (ptr->type == CODE_DIV) {
+                    if (ptr->z->data_int == 0) {
+                        ptr = ptr->next;
+                        continue;
+                    }
                     result = ptr->y->data_int / ptr->z->data_int;
+                }
 
                 ircode_can_opt = 1;
 
