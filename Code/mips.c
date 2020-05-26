@@ -78,21 +78,22 @@ void mips_print(FILE* fp, IrCode* code_list) {
             "_ret: .asciiz \"\\n\"\n"
             ".globl main\n"
             ".text\n"
-            "read:\n"
-            "  li $v0, 4\n"
-            "  la $a0, _prompt\n"
-            "  syscall\n"
-            "  li $v0, 5\n"
-            "  syscall\n"
-            "  jr $ra\n"
-            "write:\n"
-            "  li $v0, 1\n"
-            "  syscall\n"
-            "  li $v0, 4\n"
-            "  la $a0, _ret\n"
-            "  syscall\n"
-            "  move $v0, $0\n"
-            "  jr $ra\n");
+            // "read:\n"
+            // "  li $v0, 4\n"
+            // "  la $a0, _prompt\n"
+            // "  syscall\n"
+            // "  li $v0, 5\n"
+            // "  syscall\n"
+            // "  jr $ra\n"
+            // "write:\n"
+            // "  li $v0, 1\n"
+            // "  syscall\n"
+            // "  li $v0, 4\n"
+            // "  la $a0, _ret\n"
+            // "  syscall\n"
+            // "  move $v0, $0\n"
+            // "  jr $ra\n"
+    );
 
     IrCode* ptr = code_list;
     while (ptr != code_list) {
@@ -152,6 +153,16 @@ void mips_print(FILE* fp, IrCode* code_list) {
     }
 }
 
+void mips_printf_setvar(IrOprand* dst, int src) {
+    mips_reg_load(MIPS_REG_T7, dst);
+    if (dst->type == OP_GETDATA) {
+        fprintf(mips_fp, "  lw $t7, %d($fp)\n", mips_regs[MIPS_REG_T7].var->offset);
+        fprintf(mips_fp, "  sw %s, 0($t7)\n", mips_reg_name[src]);
+    } else {
+        fprintf(mips_fp, "  sw %s, %d($fp)\n", mips_reg_name[src], mips_regs[MIPS_REG_T7].var->offset);
+    }
+}
+
 void mips_print_LABEL(IrCode* code) {
     fprintf(mips_fp, "l_%d:\n", code->data_int);
 }
@@ -165,18 +176,22 @@ void mips_print_FUNC(IrCode* code) {
     // args
     // old ra
     // old fp <- fp
-    fprintf(mips_fp, "  addi $sp, $sp, -4\n");
-    fprintf(mips_fp, "  sw $ra, 0($sp)\n");
-    fprintf(mips_fp, "  addi $sp, $sp, -4\n");
-    fprintf(mips_fp, "  sw $fp, 0($sp)\n");
-    fprintf(mips_fp, "  move $fp, $sp\n");
+    fprintf(mips_fp,
+            "  addi $sp, $sp, -4\n"
+            "  sw $ra, 0($sp)\n"
+            "  addi $sp, $sp, -4\n"
+            "  sw $fp, 0($sp)\n"
+            "  move $fp, $sp\n");
 
     mips_sp_offset = 0;
     mips_arg_nr = 0;
     mips_param_nr = 0;
 }
 
-void mips_print_ASSIGN(IrCode* code) {}
+void mips_print_ASSIGN(IrCode* code) {
+    mips_reg_load(MIPS_REG_T0, code->y);
+    mips_printf_setvar(code->x, MIPS_REG_T0);
+}
 
 void mips_print_ADD(IrCode* code) {}
 
@@ -204,7 +219,12 @@ void mips_print_RET(IrCode* code) {
             "  jr $ra\n");
 }
 
-void mips_print_DEC(IrCode* code) {}
+void mips_print_DEC(IrCode* code) {
+    mips_var_t* var = mips_var_new(code->x);
+    mips_sp_offset -= code->data_int;
+    fprintf(mips_fp, "  addi $sp, $sp, %d\n", code->data_int);
+    var->offset = code->data_int;
+}
 
 void mips_print_ARG(IrCode* code) {
     // arg...
@@ -231,14 +251,8 @@ void mips_print_CALL(IrCode* code) {
     mips_sp_offset += mips_arg_nr * 4;
     mips_arg_nr = 0;
 
-    mips_reg_load(MIPS_REG_T0, code->x);
     // v0 holds return value
-    if (code->x->type == OP_GETDATA) {
-        fprintf(mips_fp, "  lw $t0, %d($fp)\n", mips_regs[MIPS_REG_T0].var->offset);
-        fprintf(mips_fp, "  sw $v0, 0($t0)\n");
-    } else {
-        fprintf(mips_fp, "  sw $v0, %d($fp)\n", mips_regs[MIPS_REG_T0].var->offset);
-    }
+    mips_printf_setvar(code->x, MIPS_REG_V0);
 }
 
 void mips_print_PARAM(IrCode* code) {
@@ -252,6 +266,25 @@ void mips_print_PARAM(IrCode* code) {
     mips_param_nr++;
 }
 
-void mips_print_READ(IrCode* code) {}
+void mips_print_READ(IrCode* code) {
+    fprintf(mips_fp,
+            "  li $v0, 4\n"
+            "  la $a0, _prompt\n"
+            "  syscall\n"
+            "  li $v0, 5\n"
+            "  syscall\n");
 
-void mips_print_WRITE(IrCode* code) {}
+    // data at $v0
+    mips_printf_setvar(code->x, MIPS_REG_V0);
+}
+
+void mips_print_WRITE(IrCode* code) {
+    mips_reg_load(MIPS_REG_A0, code->x);
+
+    fprintf(mips_fp,
+            "  li $v0, 1\n"
+            "  syscall\n"
+            "  li $v0, 4\n"
+            "  la $a0, _ret\n"
+            "  syscall\n");
+}
