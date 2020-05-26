@@ -193,19 +193,65 @@ void mips_print_ASSIGN(IrCode* code) {
     mips_printf_setvar(code->x, MIPS_REG_T0);
 }
 
-void mips_print_ADD(IrCode* code) {}
+void mips_print_ADD(IrCode* code) {
+    mips_reg_load(MIPS_REG_T1, code->y);
+    mips_reg_load(MIPS_REG_T2, code->z);
 
-void mips_print_SUB(IrCode* code) {}
+    fprintf(mips_fp, "  add $t0, $t1, $t2\n");
+    mips_printf_setvar(code->x, MIPS_REG_T0);
+}
 
-void mips_print_MUL(IrCode* code) {}
+void mips_print_SUB(IrCode* code) {
+    mips_reg_load(MIPS_REG_T1, code->y);
+    mips_reg_load(MIPS_REG_T2, code->z);
 
-void mips_print_DIV(IrCode* code) {}
+    fprintf(mips_fp, "  sub $t0, $t1, $t2\n");
+    mips_printf_setvar(code->x, MIPS_REG_T0);
+}
+
+void mips_print_MUL(IrCode* code) {
+    mips_reg_load(MIPS_REG_T1, code->y);
+    mips_reg_load(MIPS_REG_T2, code->z);
+
+    fprintf(mips_fp, "  mul $t0, $t1, $t2\n");
+    mips_printf_setvar(code->x, MIPS_REG_T0);
+}
+
+void mips_print_DIV(IrCode* code) {
+    mips_reg_load(MIPS_REG_T1, code->y);
+    mips_reg_load(MIPS_REG_T2, code->z);
+
+    fprintf(mips_fp, "  div $t1, $t2\n");
+    fprintf(mips_fp, "  mflo $t0\n");
+    mips_printf_setvar(code->x, MIPS_REG_T0);
+}
 
 void mips_print_GOTO(IrCode* code) {
     fprintf(mips_fp, "  j l_%d\n", code->x->data_int);
 }
 
-void mips_print_GOCOND(IrCode* code) {}
+void mips_print_GOCOND(IrCode* code) {
+    mips_reg_load(MIPS_REG_T0, code->x);
+    mips_reg_load(MIPS_REG_T1, code->y);
+
+    const char* intr = "INVALID";
+
+    if (code->data_int == RELOP_EQ) {
+        intr = "beq";
+    } else if (code->data_int == RELOP_NE) {
+        intr = "bne";
+    } else if (code->data_int == RELOP_LE) {
+        intr = "ble";
+    } else if (code->data_int == RELOP_GE) {
+        intr = "bge";
+    } else if (code->data_int == RELOP_LT) {
+        intr = "blt";
+    } else if (code->data_int == RELOP_GT) {
+        intr = "bgt";
+    }
+
+    fprintf(mips_fp, "  %s $t0, $t1, l_%d\n", intr, code->z->data_int);
+}
 
 void mips_print_RET(IrCode* code) {
     // args         (1) sp go back here
