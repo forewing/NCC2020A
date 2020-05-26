@@ -57,4 +57,11 @@ void __free(void* n);
         __ITEM__ = NULL;      \
     }
 
+#define msprintf(target, ...)                               \
+    {                                                       \
+        size_t needed = snprintf(NULL, 0, __VA_ARGS__) + 1; \
+        target = (char*)malloc(needed);                     \
+        sprintf(target, __VA_ARGS__);                       \
+    }
+
 #endif
