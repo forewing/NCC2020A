@@ -2,6 +2,7 @@
 #define MIPS_H
 
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "helper.h"
@@ -62,6 +63,23 @@ void mips_var_init();
 mips_var_t* mips_var_new(IrOprand* op);
 mips_var_t* mips_var_get(IrOprand* op);
 
-void mips_print(IrCode* code_list);
+void mips_print(FILE* fp, IrCode* code_list);
+
+void mips_print_LABEL(IrCode* code);
+void mips_print_FUNC(IrCode* code);
+void mips_print_ASSIGN(IrCode* code);
+void mips_print_ADD(IrCode* code);
+void mips_print_SUB(IrCode* code);
+void mips_print_MUL(IrCode* code);
+void mips_print_DIV(IrCode* code);
+void mips_print_GOTO(IrCode* code);
+void mips_print_GOCOND(IrCode* code);
+void mips_print_RET(IrCode* code);
+void mips_print_DEC(IrCode* code);
+void mips_print_ARG(IrCode* code);
+void mips_print_CALL(IrCode* code);
+void mips_print_PARAM(IrCode* code);
+void mips_print_READ(IrCode* code);
+void mips_print_WRITE(IrCode* code);
 
 #endif

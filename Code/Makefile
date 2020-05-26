@@ -34,29 +34,17 @@ syntax-c: $(YFILE)
 
 # 定义的一些伪目标
 .PHONY: clean test diff lab1 gdb
-test:
-ifdef target
-	./parser ../Test/$(target).cmm
-else
-	./parser ../Test/test1.cmm
-endif
 
 gdb: syntax-c lexical
 	$(CC) -g -o parser-gdb $(filter-out $(LFC),$(CFILES)) -lfl -ly $(LDFLAGS)
 
-test:
+test: parser
 ifdef target
-	./parser ../Test/$(target).cmm
+	./parser ../Test/$(target).cmm ../Test/$(target).asm && \
+	spim -file "../Test/$(target).asm"
 else
 	./parser ../Test/test1.cmm
 endif
-
-ir: parser
-	./parser ../Test/Lab3/$(target).cmm ../Test/Lab3/$(target).out
-
-irsim:
-	make ir target=$(target)
-	python ../NCC-irsim/irsim.py ../Test/Lab3/$(target).out
 
 clean:
 	rm -f parser lex.yy.c syntax.tab.c syntax.tab.h syntax.output parser-gdb

@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "ir.h"
+#include "mips.h"
 #include "state.h"
 #include "syntax.tab.h"
 #include "tree.h"
@@ -28,7 +29,7 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    ircode_opt(ircode_list);
+    // ircode_opt(ircode_list);
 
     if (argc > 2) {
         FILE* fp = fopen(argv[2], "w");
@@ -36,9 +37,11 @@ int main(int argc, char** argv) {
             perror(argv[2]);
             return 1;
         }
-        IrCode_print(fp, ircode_list);
+        // IrCode_print(fp, ircode_list);
+        mips_print(fp, ircode_list);
     } else {
-        IrCode_print(stdout, ircode_list);
+        // IrCode_print(stdout, ircode_list);
+        mips_print(stdout, ircode_list);
     }
 
     return 0;
