@@ -19,7 +19,43 @@ void mips_reg_init() {
     }
 }
 
-void mips_reg_load(int reg_id, IrOprand* op) {}
+void mips_reg_load(int reg_id, IrOprand* op) {
+    fprintf(mips_fp, "# load %s <- %s\n", mips_reg_name[reg_id], IrOprand_print(op));
+
+    mips_regs[reg_id].var = NULL;
+
+    if (op->type == OP_CONST) {
+        // const
+        fprintf(mips_fp, "    li %s, %d\n", mips_reg_name[reg_id], op->data_int);
+        return;
+    }
+
+    IrOprand* op_real = op;
+    if (op->type == OP_GETADDR || op->type == OP_GETDATA)
+        op_real = op->data_op;
+
+    mips_var_t* var = mips_var_get(op_real);
+    if (!var) {
+        // alloc
+        fprintf(mips_fp, "# no exist, alloc\n");
+        var = mips_var_new(op_real);
+        mips_sp_offset -= 4;
+        fprintf(mips_fp, "    addi $sp, $sp, -4\n");
+        var->offset = mips_sp_offset;
+    }
+
+    if (op->type == OP_GETADDR) {
+        fprintf(mips_fp, "    addi %s, $fp, %d\n", mips_reg_name[reg_id], var->offset);
+    } else if (op->type == OP_GETDATA) {
+        fprintf(mips_fp, "    lw $s0, %d($fp)\n", var->offset);
+        fprintf(mips_fp, "    lw %s, 0($s0)\n", mips_reg_name[reg_id]);
+    } else {
+        // temp, var
+        fprintf(mips_fp, "    lw %s, %d($fp)\n", mips_reg_name[reg_id], var->offset);
+    }
+
+    mips_regs[reg_id].var = var;
+}
 
 void mips_var_init() {
     mips_var_list = (mips_var_t*)malloc(sizeof(mips_var_t));
@@ -47,7 +83,7 @@ mips_var_t* mips_var_new(IrOprand* op) {
 }
 
 mips_var_t* mips_var_get(IrOprand* op) {
-    mips_var_t* ptr = mips_var_list;
+    mips_var_t* ptr = mips_var_list->next;
     while (ptr != mips_var_list) {
         if (ptr->op->type == op->type) {
             if (op->type == OP_TEMP) {
@@ -79,24 +115,27 @@ void mips_print(FILE* fp, IrCode* code_list) {
             ".globl main\n"
             ".text\n"
             // "read:\n"
-            // "  li $v0, 4\n"
-            // "  la $a0, _prompt\n"
-            // "  syscall\n"
-            // "  li $v0, 5\n"
-            // "  syscall\n"
-            // "  jr $ra\n"
+            // "    li $v0, 4\n"
+            // "    la $a0, _prompt\n"
+            // "    syscall\n"
+            // "    li $v0, 5\n"
+            // "    syscall\n"
+            // "    jr $ra\n"
             // "write:\n"
-            // "  li $v0, 1\n"
-            // "  syscall\n"
-            // "  li $v0, 4\n"
-            // "  la $a0, _ret\n"
-            // "  syscall\n"
-            // "  move $v0, $0\n"
-            // "  jr $ra\n"
+            // "    li $v0, 1\n"
+            // "    syscall\n"
+            // "    li $v0, 4\n"
+            // "    la $a0, _ret\n"
+            // "    syscall\n"
+            // "    move $v0, $0\n"
+            // "    jr $ra\n"
     );
 
-    IrCode* ptr = code_list;
+    IrCode* ptr = code_list->next;
     while (ptr != code_list) {
+        fprintf(fp, "\n# ");
+        IrCode_print_once(fp, ptr);
+
         switch (ptr->type) {
             case CODE_LABEL:
                 mips_print_LABEL(ptr);
@@ -154,17 +193,18 @@ void mips_print(FILE* fp, IrCode* code_list) {
 }
 
 void mips_printf_setvar(IrOprand* dst, int src) {
-    mips_reg_load(MIPS_REG_T7, dst);
+    mips_reg_load(MIPS_REG_S1, dst);
+    fprintf(mips_fp, "# setvar %s <- %s\n", IrOprand_print(dst), mips_reg_name[src]);
     if (dst->type == OP_GETDATA) {
-        fprintf(mips_fp, "  lw $t7, %d($fp)\n", mips_regs[MIPS_REG_T7].var->offset);
-        fprintf(mips_fp, "  sw %s, 0($t7)\n", mips_reg_name[src]);
+        fprintf(mips_fp, "    lw $s1, %d($fp)\n", mips_regs[MIPS_REG_S1].var->offset);
+        fprintf(mips_fp, "    sw %s, 0($s1)\n", mips_reg_name[src]);
     } else {
-        fprintf(mips_fp, "  sw %s, %d($fp)\n", mips_reg_name[src], mips_regs[MIPS_REG_T7].var->offset);
+        fprintf(mips_fp, "    sw %s, %d($fp)\n", mips_reg_name[src], mips_regs[MIPS_REG_S1].var->offset);
     }
 }
 
 void mips_print_LABEL(IrCode* code) {
-    fprintf(mips_fp, "l_%d:\n", code->data_int);
+    fprintf(mips_fp, "l_%d:\n", code->x->data_int);
 }
 
 void mips_print_FUNC(IrCode* code) {
@@ -177,11 +217,11 @@ void mips_print_FUNC(IrCode* code) {
     // old ra
     // old fp <- fp
     fprintf(mips_fp,
-            "  addi $sp, $sp, -4\n"
-            "  sw $ra, 0($sp)\n"
-            "  addi $sp, $sp, -4\n"
-            "  sw $fp, 0($sp)\n"
-            "  move $fp, $sp\n");
+            "    addi $sp, $sp, -4\n"
+            "    sw $ra, 0($sp)\n"
+            "    addi $sp, $sp, -4\n"
+            "    sw $fp, 0($sp)\n"
+            "    move $fp, $sp\n");
 
     mips_sp_offset = 0;
     mips_arg_nr = 0;
@@ -197,7 +237,7 @@ void mips_print_ADD(IrCode* code) {
     mips_reg_load(MIPS_REG_T1, code->y);
     mips_reg_load(MIPS_REG_T2, code->z);
 
-    fprintf(mips_fp, "  add $t0, $t1, $t2\n");
+    fprintf(mips_fp, "    add $t0, $t1, $t2\n");
     mips_printf_setvar(code->x, MIPS_REG_T0);
 }
 
@@ -205,7 +245,7 @@ void mips_print_SUB(IrCode* code) {
     mips_reg_load(MIPS_REG_T1, code->y);
     mips_reg_load(MIPS_REG_T2, code->z);
 
-    fprintf(mips_fp, "  sub $t0, $t1, $t2\n");
+    fprintf(mips_fp, "    sub $t0, $t1, $t2\n");
     mips_printf_setvar(code->x, MIPS_REG_T0);
 }
 
@@ -213,7 +253,7 @@ void mips_print_MUL(IrCode* code) {
     mips_reg_load(MIPS_REG_T1, code->y);
     mips_reg_load(MIPS_REG_T2, code->z);
 
-    fprintf(mips_fp, "  mul $t0, $t1, $t2\n");
+    fprintf(mips_fp, "    mul $t0, $t1, $t2\n");
     mips_printf_setvar(code->x, MIPS_REG_T0);
 }
 
@@ -221,13 +261,13 @@ void mips_print_DIV(IrCode* code) {
     mips_reg_load(MIPS_REG_T1, code->y);
     mips_reg_load(MIPS_REG_T2, code->z);
 
-    fprintf(mips_fp, "  div $t1, $t2\n");
-    fprintf(mips_fp, "  mflo $t0\n");
+    fprintf(mips_fp, "    div $t1, $t2\n");
+    fprintf(mips_fp, "    mflo $t0\n");
     mips_printf_setvar(code->x, MIPS_REG_T0);
 }
 
 void mips_print_GOTO(IrCode* code) {
-    fprintf(mips_fp, "  j l_%d\n", code->x->data_int);
+    fprintf(mips_fp, "    j l_%d\n", code->x->data_int);
 }
 
 void mips_print_GOCOND(IrCode* code) {
@@ -250,7 +290,7 @@ void mips_print_GOCOND(IrCode* code) {
         intr = "bgt";
     }
 
-    fprintf(mips_fp, "  %s $t0, $t1, l_%d\n", intr, code->z->data_int);
+    fprintf(mips_fp, "    %s $t0, $t1, l_%d\n", intr, code->z->data_int);
 }
 
 void mips_print_RET(IrCode* code) {
@@ -259,16 +299,16 @@ void mips_print_RET(IrCode* code) {
     // old fp <- fp (3) load fp
     mips_reg_load(MIPS_REG_V0, code->x);
     fprintf(mips_fp,
-            "  addi $sp, $fp, 8\n"
-            "  lw $ra 4($fp)\n"
-            "  lw $fp 0($fp)\n"
-            "  jr $ra\n");
+            "    addi $sp, $fp, 8\n"
+            "    lw $ra 4($fp)\n"
+            "    lw $fp 0($fp)\n"
+            "    jr $ra\n");
 }
 
 void mips_print_DEC(IrCode* code) {
     mips_var_t* var = mips_var_new(code->x);
     mips_sp_offset -= code->data_int;
-    fprintf(mips_fp, "  addi $sp, $sp, %d\n", code->data_int);
+    fprintf(mips_fp, "    addi $sp, $sp, %d\n", -code->data_int);
     var->offset = code->data_int;
 }
 
@@ -278,22 +318,22 @@ void mips_print_ARG(IrCode* code) {
     // arg1
 
     mips_reg_load(MIPS_REG_T0, code->x);
-    fprintf(mips_fp, "  addi $sp, $sp, -4\n");
-    fprintf(mips_fp, "  sw $t0, 0($sp)\n");
+    fprintf(mips_fp, "    addi $sp, $sp, -4\n");
+    fprintf(mips_fp, "    sw $t0, 0($sp)\n");
 
     mips_sp_offset -= 4;
     mips_arg_nr++;
 }
 
 void mips_print_CALL(IrCode* code) {
-    if (strcmp(code->x->data_str, "main") == 0) {
-        fprintf(mips_fp, "  jal main\n");
+    if (strcmp(code->y->data_str, "main") == 0) {
+        fprintf(mips_fp, "    jal main\n");
     } else {
-        fprintf(mips_fp, "  jal f_%s\n", code->y->data_str);
+        fprintf(mips_fp, "    jal f_%s\n", code->y->data_str);
     }
 
     // remove args
-    fprintf(mips_fp, "  addi $sp, $sp, %d\n", mips_arg_nr * 4);
+    fprintf(mips_fp, "    addi $sp, $sp, %d\n", mips_arg_nr * 4);
     mips_sp_offset += mips_arg_nr * 4;
     mips_arg_nr = 0;
 
@@ -314,11 +354,11 @@ void mips_print_PARAM(IrCode* code) {
 
 void mips_print_READ(IrCode* code) {
     fprintf(mips_fp,
-            "  li $v0, 4\n"
-            "  la $a0, _prompt\n"
-            "  syscall\n"
-            "  li $v0, 5\n"
-            "  syscall\n");
+            "    li $v0, 4\n"
+            "    la $a0, _prompt\n"
+            "    syscall\n"
+            "    li $v0, 5\n"
+            "    syscall\n");
 
     // data at $v0
     mips_printf_setvar(code->x, MIPS_REG_V0);
@@ -328,9 +368,9 @@ void mips_print_WRITE(IrCode* code) {
     mips_reg_load(MIPS_REG_A0, code->x);
 
     fprintf(mips_fp,
-            "  li $v0, 1\n"
-            "  syscall\n"
-            "  li $v0, 4\n"
-            "  la $a0, _ret\n"
-            "  syscall\n");
+            "    li $v0, 1\n"
+            "    syscall\n"
+            "    li $v0, 4\n"
+            "    la $a0, _ret\n"
+            "    syscall\n");
 }

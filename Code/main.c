@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    // ircode_opt(ircode_list);
+    ircode_opt(ircode_list);
 
     if (argc > 2) {
         FILE* fp = fopen(argv[2], "w");

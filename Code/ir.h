@@ -73,6 +73,7 @@ void IrCode_insert(IrCode* pos, IrCode* elem);
 void IrCode_delete(IrCode* pos);
 
 void IrCode_print(FILE* fp, IrCode* tail);
+void IrCode_print_once(FILE* fp, IrCode* code);
 const char* IrOprand_print(IrOprand* op);
 
 extern IrCode* ircode_list;

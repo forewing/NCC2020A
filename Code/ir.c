@@ -112,82 +112,87 @@ const char* IrOprand_print(IrOprand* op) {
     return ret;
 }
 
+void IrCode_print_once(FILE* fp, IrCode* code) {
+    IrCode* ptr = code;
+    const char* x = IrOprand_print(ptr->x);
+    const char* y = IrOprand_print(ptr->y);
+    const char* z = IrOprand_print(ptr->z);
+    const char* relop = "INVALID";
+
+    switch (ptr->type) {
+        case CODE_NOP:
+            break;
+        case CODE_LABEL:
+            fprintf(fp, "LABEL\t%s :\n", x);
+            break;
+        case CODE_FUNC:
+            fprintf(fp, "FUNCTION\t%s :\n", x);
+            break;
+        case CODE_ASSIGN:
+            fprintf(fp, "%s\t:=\t%s\n", x, y);
+            break;
+        case CODE_ADD:
+            fprintf(fp, "%s\t:=\t%s\t+\t%s\n", x, y, z);
+            break;
+        case CODE_SUB:
+            fprintf(fp, "%s\t:=\t%s\t-\t%s\n", x, y, z);
+            break;
+        case CODE_MUL:
+            fprintf(fp, "%s\t:=\t%s\t*\t%s\n", x, y, z);
+            break;
+        case CODE_DIV:
+            fprintf(fp, "%s\t:=\t%s\t/\t%s\n", x, y, z);
+            break;
+        case CODE_GOTO:
+            fprintf(fp, "GOTO\t%s\n", x);
+            break;
+        case CODE_GOCOND:
+            if (ptr->data_int == RELOP_EQ)
+                relop = "==";
+            else if (ptr->data_int == RELOP_GE)
+                relop = ">=";
+            else if (ptr->data_int == RELOP_GT)
+                relop = ">";
+            else if (ptr->data_int == RELOP_LE)
+                relop = "<=";
+            else if (ptr->data_int == RELOP_LT)
+                relop = "<";
+            else if (ptr->data_int == RELOP_NE)
+                relop = "!=";
+            else
+                relop = "INVALID";
+            fprintf(fp, "IF\t%s\t%s\t%s\tGOTO\t%s\n", x, relop, y, z);
+            break;
+        case CODE_RET:
+            fprintf(fp, "RETURN\t%s\n", x);
+            break;
+        case CODE_DEC:
+            fprintf(fp, "DEC\t%s\t%d\n", x, ptr->data_int);
+            break;
+        case CODE_ARG:
+            fprintf(fp, "ARG\t%s\n", x);
+            break;
+        case CODE_CALL:
+            fprintf(fp, "%s\t:=\tCALL %s\n", x, y);
+            break;
+        case CODE_PARAM:
+            fprintf(fp, "PARAM\t%s\n", x);
+            break;
+        case CODE_READ:
+            fprintf(fp, "READ\t%s\n", x);
+            break;
+        case CODE_WRITE:
+            fprintf(fp, "WRITE\t%s\n", x);
+            break;
+        default:
+            break;
+    }
+}
+
 void IrCode_print(FILE* fp, IrCode* tail) {
     IrCode* ptr = tail->next;
     while (ptr != tail) {
-        const char* x = IrOprand_print(ptr->x);
-        const char* y = IrOprand_print(ptr->y);
-        const char* z = IrOprand_print(ptr->z);
-        const char* relop = "INVALID";
-
-        switch (ptr->type) {
-            case CODE_NOP:
-                break;
-            case CODE_LABEL:
-                fprintf(fp, "LABEL\t%s :\n", x);
-                break;
-            case CODE_FUNC:
-                fprintf(fp, "FUNCTION\t%s :\n", x);
-                break;
-            case CODE_ASSIGN:
-                fprintf(fp, "%s\t:=\t%s\n", x, y);
-                break;
-            case CODE_ADD:
-                fprintf(fp, "%s\t:=\t%s\t+\t%s\n", x, y, z);
-                break;
-            case CODE_SUB:
-                fprintf(fp, "%s\t:=\t%s\t-\t%s\n", x, y, z);
-                break;
-            case CODE_MUL:
-                fprintf(fp, "%s\t:=\t%s\t*\t%s\n", x, y, z);
-                break;
-            case CODE_DIV:
-                fprintf(fp, "%s\t:=\t%s\t/\t%s\n", x, y, z);
-                break;
-            case CODE_GOTO:
-                fprintf(fp, "GOTO\t%s\n", x);
-                break;
-            case CODE_GOCOND:
-                if (ptr->data_int == RELOP_EQ)
-                    relop = "==";
-                else if (ptr->data_int == RELOP_GE)
-                    relop = ">=";
-                else if (ptr->data_int == RELOP_GT)
-                    relop = ">";
-                else if (ptr->data_int == RELOP_LE)
-                    relop = "<=";
-                else if (ptr->data_int == RELOP_LT)
-                    relop = "<";
-                else if (ptr->data_int == RELOP_NE)
-                    relop = "!=";
-                else
-                    relop = "INVALID";
-                fprintf(fp, "IF\t%s\t%s\t%s\tGOTO\t%s\n", x, relop, y, z);
-                break;
-            case CODE_RET:
-                fprintf(fp, "RETURN\t%s\n", x);
-                break;
-            case CODE_DEC:
-                fprintf(fp, "DEC\t%s\t%d\n", x, ptr->data_int);
-                break;
-            case CODE_ARG:
-                fprintf(fp, "ARG\t%s\n", x);
-                break;
-            case CODE_CALL:
-                fprintf(fp, "%s\t:=\tCALL %s\n", x, y);
-                break;
-            case CODE_PARAM:
-                fprintf(fp, "PARAM\t%s\n", x);
-                break;
-            case CODE_READ:
-                fprintf(fp, "READ\t%s\n", x);
-                break;
-            case CODE_WRITE:
-                fprintf(fp, "WRITE\t%s\n", x);
-                break;
-            default:
-                break;
-        }
+        IrCode_print_once(fp, ptr);
 
         ptr = ptr->next;
     }
