@@ -9,6 +9,7 @@
 
 /Test/tmp
 /Test/**.out
+/Test/**/**.asm
 
 /Lab
 report.pdf
