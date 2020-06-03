@@ -110,8 +110,10 @@ void mips_print(FILE* fp, IrCode* code_list) {
 
     fprintf(mips_fp,
             ".data\n"
-            "_prompt: .asciiz \"Enter an integer:\"\n"
+            "_prompt: .asciiz \" \"\n"
             "_ret: .asciiz \"\\n\"\n"
+            // "_prompt: .asciiz \"Enter an integer:\"\n"
+            // "_ret: .asciiz \"\\n\"\n"
             ".globl main\n"
             ".text\n"
             // "read:\n"
@@ -133,7 +135,7 @@ void mips_print(FILE* fp, IrCode* code_list) {
 
     IrCode* ptr = code_list->next;
     while (ptr != code_list) {
-        fprintf(fp, "\n# ");
+        fprintf(fp, "# ");
         IrCode_print_once(fp, ptr);
 
         switch (ptr->type) {
@@ -309,7 +311,7 @@ void mips_print_DEC(IrCode* code) {
     mips_var_t* var = mips_var_new(code->x);
     mips_sp_offset -= code->data_int;
     fprintf(mips_fp, "    addi $sp, $sp, %d\n", -code->data_int);
-    var->offset = code->data_int;
+    var->offset = mips_sp_offset;
 }
 
 void mips_print_ARG(IrCode* code) {
