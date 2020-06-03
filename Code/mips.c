@@ -110,10 +110,9 @@ void mips_print(FILE* fp, IrCode* code_list) {
 
     fprintf(mips_fp,
             ".data\n"
-            "_prompt: .asciiz \" \"\n"
+            // "_prompt: .asciiz \" \"\n"
+            "_prompt: .asciiz \"Enter an integer:\"\n"
             "_ret: .asciiz \"\\n\"\n"
-            // "_prompt: .asciiz \"Enter an integer:\"\n"
-            // "_ret: .asciiz \"\\n\"\n"
             ".globl main\n"
             ".text\n"
             // "read:\n"
