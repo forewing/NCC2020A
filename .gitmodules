@@ -1,8 +1,4 @@
 [submodule "compilers-tests"]
 	path = compilers-tests
-	url = git@git.jbesu.com:Mirrors/compilers-tests.git
-	branch = master
-[submodule "NCC-irsim"]
-	path = NCC-irsim
-	url = https://git.jbesu.com/Mirrors/NCC-irsim
+	url = https://github.com/massimodong/compilers-tests.git
 	branch = master
